@@ -1,5 +1,8 @@
 import type {Metadata} from 'next'
 
+import {AppSidebar} from '@/components/global/AppSidebar'
+import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar'
+
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,7 +17,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>{children}</SidebarInset>
+        </SidebarProvider>
+      </body>
     </html>
   )
 }
