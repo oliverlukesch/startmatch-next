@@ -11,7 +11,7 @@ import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
 import {useCreateBlockNote} from '@blocknote/react'
 
-import {cn} from '@/lib/utils'
+import './style.css'
 
 const schema = BlockNoteSchema.create({
   blockSpecs: {
@@ -26,13 +26,18 @@ const schema = BlockNoteSchema.create({
     underline: defaultStyleSpecs.underline,
     strike: defaultStyleSpecs.strike,
   },
+  // @ts-expect-error: link is actually not required
   inlineContentSpecs: {
     text: defaultInlineContentSpecs.text,
-    link: defaultInlineContentSpecs.link,
+    // link: defaultInlineContentSpecs.link,
   },
 })
 
-export default function RichTextEditor({className}: {className?: string}) {
+export default function RichTextEditor(props: {className?: string}) {
   const editor = useCreateBlockNote({animations: false, schema})
-  return <BlockNoteView editor={editor} className={cn('rounded-md border p-1', className)} />
+
+  // this works, save for later reference
+  // console.log('editor', editor._tiptapEditor)
+
+  return <BlockNoteView editor={editor} sideMenu={false} data-theming-primary-rte {...props} />
 }

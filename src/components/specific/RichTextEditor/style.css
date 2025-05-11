@@ -1,0 +1,9 @@
+@reference 'tailwindcss';
+
+.bn-container[data-theming-primary-rte] {
+  @apply rounded-xl border px-3 py-2;
+}
+
+.bn-container[data-theming-primary-rte] .bn-editor {
+  @apply h-full p-0;
+}
