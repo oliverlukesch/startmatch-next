@@ -2,18 +2,6 @@
 
 import * as React from 'react'
 
-import {NavMain} from '@/components/global/NavMain'
-import {NavProjects} from '@/components/global/NavProjects'
-import {NavUser} from '@/components/global/NavUser'
-import {TeamSwitcher} from '@/components/global/TeamSwitcher'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/ui/sidebar'
-
 import {
   AudioWaveform,
   BookOpen,
@@ -26,6 +14,19 @@ import {
   Settings2,
   SquareTerminal,
 } from 'lucide-react'
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from '@/components/ui/sidebar'
+
+import {NavMain} from '@/components/global/NavMain'
+import {NavProjects} from '@/components/global/NavProjects'
+import {NavUser} from '@/components/global/NavUser'
+import {TeamSwitcher} from '@/components/global/TeamSwitcher'
 
 // This is sample data.
 const data = {

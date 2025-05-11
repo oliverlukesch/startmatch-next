@@ -1,7 +1,8 @@
 import type {Metadata} from 'next'
 
-import {AppSidebar} from '@/components/global/AppSidebar'
 import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar'
+
+import {AppSidebar} from '@/components/global/AppSidebar'
 
 import './globals.css'
 

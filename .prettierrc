@@ -16,9 +16,13 @@
   "importOrder": [
       "^react$",
       "^next(/.*)?$",
-      "next-themes",
-      "@/*",
-      "<THIRD_PARTY_MODULES>"
+      "<THIRD_PARTY_MODULES>",
+      "@/components/ui/*",
+      "@/lib/utils/*",
+      "@/components/*",
+      "@/lib/*",
+      "@/hooks/*",
+      "^[./]"
   ],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true,

@@ -10,6 +10,9 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@blocknote/core": "^0.30.0",
+    "@blocknote/mantine": "^0.30.0",
+    "@blocknote/react": "^0.30.0",
     "@radix-ui/react-avatar": "^1.1.9",
     "@radix-ui/react-collapsible": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.13",
