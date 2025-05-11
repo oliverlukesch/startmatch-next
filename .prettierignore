@@ -1,3 +1,13 @@
+# basics
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+
+# ignore everything in the root folder
+/*
+
+# but include the src folder
+!/src
+
+# ignore shadcn components
+/src/components/ui
