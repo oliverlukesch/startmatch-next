@@ -1,0 +1,22 @@
+{
+  // editor related
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit"
+  },
+    "[markdown]": {
+    "editor.formatOnSave": false
+  },
+
+  // co-pilot related
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "file": "./knowledge.md"
+    }
+  ],
+
+  // deno related
+  "deno.enablePaths": ["./supabase/functions"]
+}
