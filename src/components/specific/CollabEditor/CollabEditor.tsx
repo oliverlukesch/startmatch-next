@@ -1,6 +1,6 @@
 'use client'
 
-import {useMemo} from 'react'
+import {useMemo, useState} from 'react'
 
 import {
   BlockNoteSchema,
@@ -21,6 +21,8 @@ import {
 } from '@blocknote/react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import * as Y from 'yjs'
+
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 
 import './style.css'
 
@@ -75,6 +77,11 @@ export type RichTextEditorProps = {
 }
 
 export default function RichTextEditor({documentName, user, appId, ...props}: RichTextEditorProps) {
+  const [commentFilter, setCommentFilter] = useState<'open' | 'resolved' | 'all'>('open')
+  const [commentSort, setCommentSort] = useState<'position' | 'recent-activity' | 'oldest'>(
+    'position',
+  )
+
   const provider = useMemo(() => {
     return new TiptapCollabProvider({
       appId: appId,
@@ -117,10 +124,7 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
   return (
     <BlockNoteView
       editor={editor}
-      // required so we can define the exact place where the editor will be
-      // rendered using BlockNoteEditorView
       renderEditor={false}
-      // required so we can display the comments in a sidebar
       comments={false}
       sideMenu={false}
       data-theming-primary-rte
@@ -131,7 +135,36 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
           <FloatingComposerController />
         </div>
         <div className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
-          <ThreadsSidebar filter="open" sort="position" />
+          <div className="mb-4 flex gap-2">
+            <Select
+              value={commentFilter}
+              onValueChange={value => setCommentFilter(value as 'open' | 'resolved' | 'all')}>
+              <SelectTrigger id="comment-filter" className="w-full">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={commentSort}
+              onValueChange={value =>
+                setCommentSort(value as 'position' | 'recent-activity' | 'oldest')
+              }>
+              <SelectTrigger id="comment-sort" className="w-full">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="position">Position</SelectItem>
+                <SelectItem value="recent-activity">Recent Activity</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <ThreadsSidebar filter={commentFilter} sort={commentSort} />
         </div>
       </div>
     </BlockNoteView>

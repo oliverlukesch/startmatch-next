@@ -36,6 +36,10 @@ A Next.js application for automated grants management.
 
 - Uses pnpm as the package manager. Do not use npm or yarn.
 
+- Avoid `space-` Tailwind classes, prefer `gap-`
+
+- When using internal React hooks, import them from the 'react' package, do not use `React.{hookName}`
+
 ### Comment Preferences
 
 - Use comments very sparsely, do not explain obvious logic
