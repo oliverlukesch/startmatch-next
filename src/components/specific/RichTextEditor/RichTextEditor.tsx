@@ -12,7 +12,12 @@ import {DefaultThreadStoreAuth, TiptapThreadStore} from '@blocknote/core/comment
 import '@blocknote/core/fonts/inter.css'
 import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
-import {useCreateBlockNote} from '@blocknote/react'
+import {
+  BlockNoteViewEditor,
+  FloatingComposerController,
+  ThreadsSidebar,
+  useCreateBlockNote,
+} from '@blocknote/react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import * as Y from 'yjs'
 
@@ -107,5 +112,26 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
     [provider, threadStore],
   )
 
-  return <BlockNoteView editor={editor} sideMenu={false} data-theming-primary-rte {...props} />
+  return (
+    <BlockNoteView
+      editor={editor}
+      // required so we can define the exact place where the editor will be
+      // rendered using BlockNoteEditorView
+      renderEditor={false}
+      // required so we can display the comments in a sidebar
+      comments={false}
+      sideMenu={false}
+      data-theming-primary-rte
+      {...props}>
+      <div className="flex h-full w-full flex-row">
+        <div className="flex-1">
+          <BlockNoteViewEditor />
+          <FloatingComposerController />
+        </div>
+        <div className="w-80 bg-amber-50">
+          <ThreadsSidebar filter="open" sort="position" />
+        </div>
+      </div>
+    </BlockNoteView>
+  )
 }
