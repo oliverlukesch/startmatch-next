@@ -26,6 +26,39 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/c
 
 import './style.css'
 
+// TYPES AND ENUMS
+
+export type CollabEditorProps = {
+  className?: string
+  documentName: string
+  appId: string
+  user: {
+    name: string
+    color: string
+    token: string
+  }
+}
+
+enum CommentFilterStatus {
+  Open = 'open',
+  Resolved = 'resolved',
+  All = 'all',
+}
+
+enum CommentSortOrder {
+  Position = 'position',
+  RecentActivity = 'recent-activity',
+  Oldest = 'oldest',
+}
+
+type User = {
+  id: string
+  username: string
+  avatarUrl: string
+}
+
+// EDITOR SETUP
+
 const doc = new Y.Doc()
 
 const schema = BlockNoteSchema.create({
@@ -49,12 +82,6 @@ const schema = BlockNoteSchema.create({
   },
 })
 
-type User = {
-  id: string
-  username: string
-  avatarUrl: string
-}
-
 async function resolveUsers(userIds: string[]): Promise<User[]> {
   await new Promise(resolve => setTimeout(resolve, 100))
 
@@ -65,22 +92,11 @@ async function resolveUsers(userIds: string[]): Promise<User[]> {
   }))
 }
 
-export type RichTextEditorProps = {
-  className?: string
-  documentName: string
-  appId: string
-  user: {
-    name: string
-    color: string
-    token: string
-  }
-}
+// MAIN COMPONENT
 
-export default function RichTextEditor({documentName, user, appId, ...props}: RichTextEditorProps) {
-  const [commentFilter, setCommentFilter] = useState<'open' | 'resolved' | 'all'>('open')
-  const [commentSort, setCommentSort] = useState<'position' | 'recent-activity' | 'oldest'>(
-    'position',
-  )
+export default function CollabEditor({documentName, user, appId, ...props}: CollabEditorProps) {
+  const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
+  const [commentSort, setCommentSort] = useState<CommentSortOrder>(CommentSortOrder.Position)
 
   const provider = useMemo(() => {
     return new TiptapCollabProvider({
@@ -135,32 +151,30 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
           <FloatingComposerController />
         </div>
         <div className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
-          <div className="mb-4 flex gap-2">
+          <div className="mb-4 grid grid-cols-2 gap-2">
             <Select
               value={commentFilter}
-              onValueChange={value => setCommentFilter(value as 'open' | 'resolved' | 'all')}>
+              onValueChange={value => setCommentFilter(value as CommentFilterStatus)}>
               <SelectTrigger id="comment-filter" className="w-full">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value={CommentFilterStatus.All}>Alle</SelectItem>
+                <SelectItem value={CommentFilterStatus.Open}>Offen</SelectItem>
+                <SelectItem value={CommentFilterStatus.Resolved}>Abgeschlossen</SelectItem>
               </SelectContent>
             </Select>
 
             <Select
               value={commentSort}
-              onValueChange={value =>
-                setCommentSort(value as 'position' | 'recent-activity' | 'oldest')
-              }>
+              onValueChange={value => setCommentSort(value as CommentSortOrder)}>
               <SelectTrigger id="comment-sort" className="w-full">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder="Sortierung" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="position">Position</SelectItem>
-                <SelectItem value="recent-activity">Recent Activity</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value={CommentSortOrder.Position}>Position</SelectItem>
+                <SelectItem value={CommentSortOrder.RecentActivity}>Aktivität</SelectItem>
+                <SelectItem value={CommentSortOrder.Oldest}>Älteste</SelectItem>
               </SelectContent>
             </Select>
           </div>
