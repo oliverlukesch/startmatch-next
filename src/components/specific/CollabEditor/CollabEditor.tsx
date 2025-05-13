@@ -101,6 +101,7 @@ async function resolveUsers(userIds: string[]): Promise<User[]> {
 // MAIN COMPONENT
 
 export default function CollabEditor({documentName, user, appId, ...props}: CollabEditorProps) {
+  const [sidebarTab, setSidebarTab] = useState<TabContent>(TabContent.Comments)
   const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
   const [commentSort, setCommentSort] = useState<CommentSortOrder>(CommentSortOrder.Position)
 
@@ -158,7 +159,8 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
         </div>
 
         <Tabs
-          defaultValue={TabContent.Comments}
+          value={sidebarTab}
+          onValueChange={value => setSidebarTab(value as TabContent)}
           className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
           <TabsList className="w-full">
             <TabsTrigger value={TabContent.Comments}>Kommentare</TabsTrigger>
