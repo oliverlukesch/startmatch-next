@@ -8,6 +8,7 @@ import {
   defaultInlineContentSpecs,
   defaultStyleSpecs,
 } from '@blocknote/core'
+import {DefaultThreadStoreAuth, TiptapThreadStore} from '@blocknote/core/comments'
 import '@blocknote/core/fonts/inter.css'
 import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
@@ -25,6 +26,7 @@ const schema = BlockNoteSchema.create({
     heading: defaultBlockSpecs.heading,
     bulletListItem: defaultBlockSpecs.bulletListItem,
     numberedListItem: defaultBlockSpecs.numberedListItem,
+    table: defaultBlockSpecs.table,
   },
   styleSpecs: {
     bold: defaultStyleSpecs.bold,
@@ -39,7 +41,23 @@ const schema = BlockNoteSchema.create({
   },
 })
 
-export interface RichTextEditorProps {
+type User = {
+  id: string
+  username: string
+  avatarUrl: string
+}
+
+async function resolveUsers(userIds: string[]): Promise<User[]> {
+  await new Promise(resolve => setTimeout(resolve, 100))
+
+  return userIds.map(userId => ({
+    id: userId,
+    username: userId,
+    avatarUrl: `https://picsum.photos/seed/${userId}/200/300`,
+  }))
+}
+
+export type RichTextEditorProps = {
   className?: string
   documentName: string
   appId: string
@@ -60,19 +78,34 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
     })
   }, [documentName, user, appId])
 
-  const editor = useCreateBlockNote({
-    animations: false,
-    schema,
-    collaboration: {
+  const threadStore = useMemo(() => {
+    return new TiptapThreadStore(
+      user.name,
       provider,
-      fragment: doc.getXmlFragment('document-store'),
-      user: {
-        name: user.name,
-        color: user.color,
+      new DefaultThreadStoreAuth(user.name, 'editor'),
+    )
+  }, [user, provider])
+
+  const editor = useCreateBlockNote(
+    {
+      animations: false,
+      schema,
+      collaboration: {
+        provider,
+        fragment: doc.getXmlFragment('document-store'),
+        user: {
+          name: user.name,
+          color: user.color,
+        },
+        showCursorLabels: 'activity',
       },
-      showCursorLabels: 'always',
+      comments: {
+        threadStore,
+      },
+      resolveUsers,
     },
-  })
+    [provider, threadStore],
+  )
 
   return <BlockNoteView editor={editor} sideMenu={false} data-theming-primary-rte {...props} />
 }
