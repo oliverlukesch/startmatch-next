@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {RichTextEditor} from '@/components/specific/RichTextEditor'
+import {CollabEditor} from '@/components/specific/CollabEditor'
 
 export default function App() {
   const userName = `user_${Math.round(Math.random() * 1000)}`
@@ -10,7 +10,7 @@ export default function App() {
   return (
     <>
       <div>User name: {userName}</div>
-      <RichTextEditor
+      <CollabEditor
         appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
         documentName="dev.document"
         user={{

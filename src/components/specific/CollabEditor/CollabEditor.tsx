@@ -123,12 +123,12 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
       sideMenu={false}
       data-theming-primary-rte
       {...props}>
-      <div className="flex h-full w-full flex-row">
+      <div className="flex flex-row">
         <div className="flex-1">
           <BlockNoteViewEditor />
           <FloatingComposerController />
         </div>
-        <div className="w-80 bg-amber-50">
+        <div className="w-80 border-l bg-slate-50 p-3">
           <ThreadsSidebar filter="open" sort="position" />
         </div>
       </div>
