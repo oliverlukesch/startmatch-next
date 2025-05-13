@@ -10,6 +10,7 @@ import {
 } from '@blocknote/core'
 import {DefaultThreadStoreAuth, TiptapThreadStore} from '@blocknote/core/comments'
 import '@blocknote/core/fonts/inter.css'
+import {de as blockNoteDE} from '@blocknote/core/locales'
 import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
 import {
@@ -108,6 +109,7 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
         threadStore,
       },
       resolveUsers,
+      dictionary: blockNoteDE,
     },
     [provider, threadStore],
   )
@@ -123,12 +125,12 @@ export default function RichTextEditor({documentName, user, appId, ...props}: Ri
       sideMenu={false}
       data-theming-primary-rte
       {...props}>
-      <div className="flex flex-row">
+      <div className="flex h-full flex-row">
         <div className="flex-1">
           <BlockNoteViewEditor />
           <FloatingComposerController />
         </div>
-        <div className="w-80 border-l bg-slate-50 p-3">
+        <div className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
           <ThreadsSidebar filter="open" sort="position" />
         </div>
       </div>
