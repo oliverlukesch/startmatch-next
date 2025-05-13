@@ -8,6 +8,6 @@
   @apply h-full px-3 py-2;
 }
 
-.bn-container[data-theming-primary-rte] .bn-thread {
+.bn-container[data-theming-primary-rte] .bn-threads-sidebar .bn-thread {
   @apply min-w-auto;
 }

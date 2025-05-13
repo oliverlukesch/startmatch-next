@@ -23,6 +23,7 @@ import {TiptapCollabProvider} from '@hocuspocus/provider'
 import * as Y from 'yjs'
 
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 
 import './style.css'
 
@@ -49,6 +50,11 @@ enum CommentSortOrder {
   Position = 'position',
   RecentActivity = 'recent-activity',
   Oldest = 'oldest',
+}
+
+enum TabContent {
+  Comments = 'comments',
+  History = 'history',
 }
 
 type User = {
@@ -150,36 +156,48 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
           <BlockNoteViewEditor />
           <FloatingComposerController />
         </div>
-        <div className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
-          <div className="mb-4 grid grid-cols-2 gap-2">
-            <Select
-              value={commentFilter}
-              onValueChange={value => setCommentFilter(value as CommentFilterStatus)}>
-              <SelectTrigger id="comment-filter" className="w-full">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={CommentFilterStatus.All}>Alle</SelectItem>
-                <SelectItem value={CommentFilterStatus.Open}>Offen</SelectItem>
-                <SelectItem value={CommentFilterStatus.Resolved}>Abgeschlossen</SelectItem>
-              </SelectContent>
-            </Select>
 
-            <Select
-              value={commentSort}
-              onValueChange={value => setCommentSort(value as CommentSortOrder)}>
-              <SelectTrigger id="comment-sort" className="w-full">
-                <SelectValue placeholder="Sortierung" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={CommentSortOrder.Position}>Position</SelectItem>
-                <SelectItem value={CommentSortOrder.RecentActivity}>Aktivität</SelectItem>
-                <SelectItem value={CommentSortOrder.Oldest}>Älteste</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <ThreadsSidebar filter={commentFilter} sort={commentSort} />
-        </div>
+        <Tabs
+          defaultValue={TabContent.Comments}
+          className="max-w-80 flex-1 shrink-0 border-l bg-slate-50 p-3">
+          <TabsList className="w-full">
+            <TabsTrigger value={TabContent.Comments}>Kommentare</TabsTrigger>
+            <TabsTrigger value={TabContent.History}>Historie</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={TabContent.Comments}>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              <Select
+                value={commentFilter}
+                onValueChange={value => setCommentFilter(value as CommentFilterStatus)}>
+                <SelectTrigger id="comment-filter" className="w-full">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CommentFilterStatus.All}>Alle</SelectItem>
+                  <SelectItem value={CommentFilterStatus.Open}>Offen</SelectItem>
+                  <SelectItem value={CommentFilterStatus.Resolved}>Abgeschlossen</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={commentSort}
+                onValueChange={value => setCommentSort(value as CommentSortOrder)}>
+                <SelectTrigger id="comment-sort" className="w-full">
+                  <SelectValue placeholder="Sortierung" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CommentSortOrder.Position}>Position</SelectItem>
+                  <SelectItem value={CommentSortOrder.RecentActivity}>Aktivität</SelectItem>
+                  <SelectItem value={CommentSortOrder.Oldest}>Älteste</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <ThreadsSidebar filter={commentFilter} sort={commentSort} />
+          </TabsContent>
+
+          <TabsContent value={TabContent.History}>Coming soon...</TabsContent>
+        </Tabs>
       </div>
     </BlockNoteView>
   )
