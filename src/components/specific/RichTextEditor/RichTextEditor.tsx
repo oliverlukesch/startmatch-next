@@ -1,5 +1,7 @@
 'use client'
 
+import {useMemo} from 'react'
+
 import {
   BlockNoteSchema,
   defaultBlockSpecs,
@@ -16,15 +18,6 @@ import * as Y from 'yjs'
 import './style.css'
 
 const doc = new Y.Doc()
-
-const provider = new TiptapCollabProvider({
-  name: 'dev.document',
-  appId: 'y9w5pjo9',
-  // generated inside the TipTap dashboard, valid for 24 hours, needs to be refreshed
-  token:
-    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NDcxMzIyNTEsIm5iZiI6MTc0NzEzMjI1MSwiZXhwIjoxNzQ3MjE4NjUxLCJpc3MiOiJodHRwczovL2Nsb3VkLnRpcHRhcC5kZXYiLCJhdWQiOiJ5OXc1cGpvOSJ9.wyU7g4kxUyvz3yWXSgKgo4ivofH6w_xcurL6-1XtPyg',
-  document: doc,
-})
 
 const schema = BlockNoteSchema.create({
   blockSpecs: {
@@ -46,7 +39,27 @@ const schema = BlockNoteSchema.create({
   },
 })
 
-export default function RichTextEditor(props: {className?: string}) {
+export interface RichTextEditorProps {
+  className?: string
+  documentName: string
+  appId: string
+  user: {
+    name: string
+    color: string
+    token: string
+  }
+}
+
+export default function RichTextEditor({documentName, user, appId, ...props}: RichTextEditorProps) {
+  const provider = useMemo(() => {
+    return new TiptapCollabProvider({
+      appId: appId,
+      name: documentName,
+      token: user.token,
+      document: doc,
+    })
+  }, [documentName, user, appId])
+
   const editor = useCreateBlockNote({
     animations: false,
     schema,
@@ -54,8 +67,8 @@ export default function RichTextEditor(props: {className?: string}) {
       provider,
       fragment: doc.getXmlFragment('document-store'),
       user: {
-        name: `User: ${Math.round(Math.random() * 1000)}`,
-        color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+        name: user.name,
+        color: user.color,
       },
       showCursorLabels: 'always',
     },
