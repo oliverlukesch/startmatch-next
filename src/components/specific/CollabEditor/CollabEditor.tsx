@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useMemo, useState} from 'react'
 
 import {
   BlockNoteSchema,
@@ -20,10 +20,8 @@ import {
   useCreateBlockNote,
 } from '@blocknote/react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
-import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
 import * as Y from 'yjs'
 
-import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 
@@ -107,12 +105,6 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
   const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
   const [commentSort, setCommentSort] = useState<CommentSortOrder>(CommentSortOrder.Position)
 
-  const [latestVersion, setLatestVersion] = useState(null)
-  const [currentVersion, setCurrentVersion] = useState(null)
-  const [versions, setVersions] = useState([])
-  const [isAutoVersioning, setIsAutoVersioning] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
-
   const provider = useMemo(() => {
     return new TiptapCollabProvider({
       appId: appId,
@@ -148,55 +140,9 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
       },
       resolveUsers,
       dictionary: blockNoteDE,
-      _tiptapOptions: {
-        extensions: [
-          CollaborationHistory.configure({
-            provider,
-            onUpdate: data => {
-              // @ts-expect-error: is okay
-              setVersions(data.versions)
-              setIsAutoVersioning(data.versioningEnabled)
-              // @ts-expect-error: is okay
-              setLatestVersion(data.version)
-              // @ts-expect-error: is okay
-              setCurrentVersion(data.currentVersion)
-            },
-          }),
-        ],
-      },
     },
     [provider, threadStore],
   )
-
-  useEffect(() => {
-    if (!editor) return
-    console.log('Editor created')
-
-    editor._tiptapEditor.storage.collabHistory.provider = provider
-    editor._tiptapEditor.storage.collabHistory.status = 'connected'
-    editor._tiptapEditor.commands.toggleVersioning()
-
-    console.log(editor._tiptapEditor.storage.collabHistory)
-  }, [editor])
-
-  useEffect(() => {
-    const onUpdate = () => {
-      console.log('On doc updated')
-      setHasChanges(true)
-    }
-
-    const onSynced = () => {
-      console.log('On doc synced')
-      doc.on('update', onUpdate)
-    }
-
-    provider.on('synced', onSynced)
-
-    return () => {
-      provider.off('synced', onSynced)
-      doc.off('update', onUpdate)
-    }
-  }, [provider])
 
   return (
     <BlockNoteView
@@ -252,41 +198,7 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
             <ThreadsSidebar filter={commentFilter} sort={commentSort} />
           </TabsContent>
 
-          <TabsContent value={TabContent.History} className="flex flex-col gap-2">
-            <Button
-              onClick={() => {
-                editor._tiptapEditor.commands.saveVersion(`Version ${Date.now()}`)
-                console.log(editor._tiptapEditor.storage.collabHistory)
-                console.log('Version saved')
-              }}>
-              Save version
-            </Button>
-
-            <Button
-              onClick={() => {
-                console.log(editor._tiptapEditor.storage.collabHistory)
-                console.log('Log history')
-              }}>
-              Log history
-            </Button>
-
-            <Button
-              onClick={() => {
-                editor._tiptapEditor.commands.toggleVersioning()
-                setIsAutoVersioning(!isAutoVersioning)
-                console.log('Log history')
-              }}>
-              Toggle versioning (is {isAutoVersioning ? 'off' : 'on'})
-            </Button>
-
-            <div>Has changes: {hasChanges ? 'true' : 'false'}</div>
-
-            <pre>{JSON.stringify(latestVersion, null, 2)}</pre>
-
-            <pre>{JSON.stringify(currentVersion, null, 2)}</pre>
-
-            <pre>{JSON.stringify(versions, null, 2)}</pre>
-          </TabsContent>
+          <TabsContent value={TabContent.History}>Coming soon...</TabsContent>
         </Tabs>
       </div>
     </BlockNoteView>
