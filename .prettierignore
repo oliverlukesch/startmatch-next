@@ -11,3 +11,6 @@ yarn.lock
 
 # ignore shadcn components
 /src/components/ui
+
+# for testing things out
+/src/components/specific/TestEditor
