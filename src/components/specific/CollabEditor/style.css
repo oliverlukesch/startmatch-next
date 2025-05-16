@@ -1,5 +1,7 @@
 @reference 'tailwindcss';
 
+/* primary rte */
+
 .bn-container[data-theming-primary-rte] {
   @apply overflow-hidden rounded-xl border;
 }
@@ -10,4 +12,10 @@
 
 .bn-container[data-theming-primary-rte] .bn-threads-sidebar .bn-thread {
   @apply min-w-auto;
+}
+
+/* mf rte */
+
+.bn-container[data-theming-mf-rte] .bn-editor {
+  @apply px-3 py-2;
 }
