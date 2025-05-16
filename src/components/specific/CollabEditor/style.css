@@ -19,3 +19,7 @@
 .bn-container[data-theming-mf-rte] .bn-editor {
   @apply px-3 py-2;
 }
+
+.bn-container[data-theming-mf-rte] .bn-threads-sidebar .bn-thread {
+  @apply min-w-auto;
+}

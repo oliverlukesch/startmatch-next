@@ -13,7 +13,7 @@ import '@blocknote/core/fonts/inter.css'
 import {de as blockNoteDE} from '@blocknote/core/locales'
 import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
-import {ThreadsSidebar, useCreateBlockNote} from '@blocknote/react'
+import {useCreateBlockNote} from '@blocknote/react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import {TiptapTransformer} from '@hocuspocus/transformer'
 import * as Y from 'yjs'
@@ -21,6 +21,7 @@ import * as Y from 'yjs'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 
+import {ThreadsSidebar} from './MFThreadsSidebar'
 import './style.css'
 
 // TYPES AND ENUMS
