@@ -17,10 +17,10 @@ import {VersioningModal} from './VersioningModal.jsx'
 import './style.css'
 import {renderDate} from './utils.js'
 
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 // @ts-nocheck
 
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 // @ts-nocheck
 
 const colors = ['#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8', '#94FADB', '#B9F18D']
@@ -133,7 +133,7 @@ const MenuBar = ({editor}) => {
   )
 }
 
-export const Editor = () => {
+export const CollabEditor = () => {
   const [latestVersion, setLatestVersion] = React.useState(null)
   const [currentVersion, setCurrentVersion] = React.useState(null)
   const [versions, setVersions] = React.useState([])

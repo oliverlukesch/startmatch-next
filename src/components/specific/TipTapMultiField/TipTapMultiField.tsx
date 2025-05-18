@@ -48,7 +48,9 @@ const EditorField = ({fieldName, provider, user, doc, setActive}: EditorFieldPro
   const editor = useEditor(
     {
       extensions: [
-        StarterKit.configure(),
+        StarterKit.configure({
+          history: false,
+        }),
         Collaboration.configure({
           document: doc,
           field: fieldName,
@@ -58,6 +60,8 @@ const EditorField = ({fieldName, provider, user, doc, setActive}: EditorFieldPro
           user,
         }),
       ],
+      // helps with SSR
+      immediatelyRender: false,
       // default in V3, might increase performance
       shouldRerenderOnTransaction: false,
       onFocus: () => {
@@ -90,17 +94,16 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     <div className={cn('flex flex-1 flex-col gap-3', className)}>
       {activeField && <h2 className="text-xl font-semibold">Active: {activeField?.fieldName}</h2>}
       {document.fields.map(fieldName => (
-        <>
+        <div key={fieldName}>
           <h3 className="text-lg font-semibold">{fieldName}</h3>
           <EditorField
-            key={fieldName}
             fieldName={fieldName}
             provider={provider}
             user={user}
             doc={doc}
             setActive={setActiveField}
           />
-        </>
+        </div>
       ))}
     </div>
   )
