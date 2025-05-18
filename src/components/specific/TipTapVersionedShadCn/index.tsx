@@ -111,6 +111,33 @@ const MenuBar = ({editor}: MenuBarProps) => {
   )
 }
 
+function getOrCreateSubField(doc: Y.Doc, subFieldName: string): Y.XmlFragment {
+  // Check if the doc has a top-level field named "default"
+  let defaultField = doc.get('default')
+
+  // Check if the field exists and is of type map
+  if (!defaultField || !(defaultField instanceof Y.Map)) {
+    console.log('Creating new default field')
+    // Create the top-level field named "default" as a map
+    defaultField = doc.getMap('default')
+  }
+
+  // Ensure we're working with a Y.Map
+  const defaultMap = defaultField as Y.Map<unknown>
+
+  // Check if the map has an XML fragment with the name of the sub-field
+  let subField = defaultMap.get(subFieldName)
+
+  // If the sub-field doesn't exist or isn't an XML fragment, create it
+  if (!subField || !(subField instanceof Y.XmlFragment)) {
+    console.log('Creating new sub-field:', subFieldName)
+    subField = new Y.XmlFragment()
+    defaultMap.set(subFieldName, subField)
+  }
+
+  return subField as Y.XmlFragment
+}
+
 export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
   const [latestVersion, setLatestVersion] = useState<number | null>(null)
   const [currentVersion, setCurrentVersion] = useState<number | null>(null)
@@ -119,6 +146,7 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
   const [versioningModalOpen, setVersioningModalOpen] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [commitDescription, setCommitDescription] = useState('')
+  const [synced, setSynced] = useState(false)
 
   const showVersioningModal = useCallback(() => {
     setVersioningModalOpen(true)
@@ -133,31 +161,41 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
     })
   }, [documentName, user, appId])
 
+  const childFragment = useMemo(() => {
+    if (!synced) return null
+    return getOrCreateSubField(doc, 'custom-2')
+  }, [synced])
+
   const editor = useEditor(
     {
       extensions: [
         StarterKit.configure({
           history: false,
         }),
-        Collaboration.configure({
-          document: doc,
-        }),
-        CollaborationCursor.configure({
-          provider,
-          user,
-        }),
-        CollaborationHistory.configure({
-          provider,
-          onUpdate: data => {
-            setVersions(data.versions)
-            setIsAutoVersioning(data.versioningEnabled)
-            setLatestVersion(data.version)
-            setCurrentVersion(data.currentVersion)
-          },
-        }),
+        ...(childFragment
+          ? [
+              Collaboration.configure({
+                document: doc,
+                fragment: childFragment,
+              }),
+              CollaborationCursor.configure({
+                provider,
+                user,
+              }),
+              CollaborationHistory.configure({
+                provider,
+                onUpdate: data => {
+                  setVersions(data.versions)
+                  setIsAutoVersioning(data.versioningEnabled)
+                  setLatestVersion(data.version)
+                  setCurrentVersion(data.currentVersion)
+                },
+              }),
+            ]
+          : []),
       ],
     },
-    [provider, user],
+    [provider, user, childFragment],
   )
 
   useEffect(() => {
@@ -166,6 +204,8 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
     }
 
     const onSynced = () => {
+      console.log('Synced')
+      setSynced(true)
       doc.on('update', onUpdate)
     }
 
@@ -231,6 +271,16 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
       <div className="flex flex-row gap-4">
         <div className="flex-1">
           <MenuBar editor={editor} />
+          <Button
+            onClick={() => {
+              console.log(provider.configuration.document.share)
+              console.log(provider.configuration.document.toJSON())
+              // console.log('isAutoVersioning', provider.isAutoVersioning())
+              // console.log('versions', provider.getVersions())
+              // console.log(editor.storage.collabHistory)
+            }}>
+            Log Provider and collabHistory
+          </Button>
           <EditorContent editor={editor} className="p-4" />
         </div>
         <Card className="w-80 shrink-0">
