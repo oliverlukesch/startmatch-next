@@ -1,6 +1,6 @@
 'use client'
 
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
@@ -21,62 +21,23 @@ import {VersioningModal} from './VersioningModal'
 import './style.css'
 import {renderDate} from './utils'
 
+export type EditorProps = {
+  appId: string
+  documentName: string
+  user: {
+    name: string
+    color: string
+    token: string
+  }
+  className?: string
+}
 interface Version {
   version: number
   name?: string
   date: string | number | Date
 }
 
-const colors = ['#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8', '#94FADB', '#B9F18D']
-const names = [
-  'Lea Thompson',
-  'Cyndi Lauper',
-  'Tom Cruise',
-  'Madonna',
-  'Jerry Hall',
-  'Joan Collins',
-  'Winona Ryder',
-  'Christina Applegate',
-  'Alyssa Milano',
-  'Molly Ringwald',
-  'Ally Sheedy',
-  'Debbie Harry',
-  'Olivia Newton-John',
-  'Elton John',
-  'Michael J. Fox',
-  'Axl Rose',
-  'Emilio Estevez',
-  'Ralph Macchio',
-  'Rob Lowe',
-  'Jennifer Grey',
-  'Mickey Rourke',
-  'John Cusack',
-  'Matthew Broderick',
-  'Justine Bateman',
-  'Lisa Bonet',
-]
-
-const getRandomElement = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
-
-const getRandomColor = () => getRandomElement(colors)
-const getRandomName = () => getRandomElement(names)
-const pickedName = getRandomName()
-
 const doc = new Y.Doc()
-
-const date = new Date()
-const dayOfTheYear = Math.floor(
-  (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24,
-)
-
-const provider = new TiptapCollabProvider({
-  appId: 'y9w5pjo9',
-  name: `room-collab-history-${dayOfTheYear}`,
-  document: doc,
-  token:
-    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NDc1ODk1ODIsIm5iZiI6MTc0NzU4OTU4MiwiZXhwIjoxNzQ3Njc1OTgyLCJpc3MiOiJodHRwczovL2Nsb3VkLnRpcHRhcC5kZXYiLCJhdWQiOiJ5OXc1cGpvOSJ9.7vDaGG_OTmCawBcVJU3Swui2bbsYyJGsXU7WMbhutko',
-  user: pickedName,
-})
 
 interface MenuBarProps {
   editor: Editor | null
@@ -150,7 +111,7 @@ const MenuBar = ({editor}: MenuBarProps) => {
   )
 }
 
-export const CollabEditor = () => {
+export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
   const [latestVersion, setLatestVersion] = useState<number | null>(null)
   const [currentVersion, setCurrentVersion] = useState<number | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
@@ -163,32 +124,41 @@ export const CollabEditor = () => {
     setVersioningModalOpen(true)
   }, [])
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        history: false,
-      }),
-      Collaboration.configure({
-        document: doc,
-      }),
-      CollaborationCursor.configure({
-        provider,
-        user: {
-          name: pickedName,
-          color: getRandomColor(),
-        },
-      }),
-      CollaborationHistory.configure({
-        provider,
-        onUpdate: data => {
-          setVersions(data.versions)
-          setIsAutoVersioning(data.versioningEnabled)
-          setLatestVersion(data.version)
-          setCurrentVersion(data.currentVersion)
-        },
-      }),
-    ],
-  })
+  const provider = useMemo(() => {
+    return new TiptapCollabProvider({
+      appId: appId,
+      name: documentName,
+      token: user.token,
+      document: doc,
+    })
+  }, [documentName, user, appId])
+
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          history: false,
+        }),
+        Collaboration.configure({
+          document: doc,
+        }),
+        CollaborationCursor.configure({
+          provider,
+          user,
+        }),
+        CollaborationHistory.configure({
+          provider,
+          onUpdate: data => {
+            setVersions(data.versions)
+            setIsAutoVersioning(data.versioningEnabled)
+            setLatestVersion(data.version)
+            setCurrentVersion(data.currentVersion)
+          },
+        }),
+      ],
+    },
+    [provider, user],
+  )
 
   useEffect(() => {
     const onUpdate = () => {
@@ -205,7 +175,7 @@ export const CollabEditor = () => {
       provider.off('synced', onSynced)
       doc.off('update', onUpdate)
     }
-  }, [])
+  }, [provider])
 
   const handleCommitDescriptionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCommitDescription(event.target.value)
