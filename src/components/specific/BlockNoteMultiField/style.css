@@ -1,0 +1,9 @@
+@reference 'tailwindcss';
+
+.bn-container[data-theming-blocknote-multifield] .bn-editor {
+  @apply px-3 py-2;
+}
+
+.bn-container[data-theming-blocknote-multifield] .bn-threads-sidebar .bn-thread {
+  @apply min-w-auto;
+}

@@ -180,21 +180,6 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
     }
   }, [activeEditor])
 
-  // const blockNoteContext: BlockNoteContextValue<
-  //   Record<string, BlockConfig>,
-  //   InlineContentSchema,
-  //   StyleSchema
-  // > = useMemo(
-  //   () => ({
-  //     editor: activeEditor,
-  //   }),
-  //   [activeEditor],
-  // )
-
-  // useEffect(() => {
-  //   if (blockNoteContext) console.log('active editor', blockNoteContext)
-  // }, [blockNoteContext])
-
   return (
     <div className="flex h-full flex-row overflow-hidden rounded-xl border">
       <div className="flex flex-1 flex-col">
@@ -205,7 +190,7 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
           onSelectionChange={() => {
             if (activeEditor !== editor1) setActiveEditor(editor1)
           }}
-          data-theming-mf-rte
+          data-theming-blocknote-multifield
         />
         <BlockNoteView
           editor={editor2}
@@ -214,7 +199,7 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
           onSelectionChange={() => {
             if (activeEditor !== editor2) setActiveEditor(editor2)
           }}
-          data-theming-mf-rte
+          data-theming-blocknote-multifield
         />
       </div>
 
@@ -263,7 +248,7 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
               renderEditor={false}
               comments={false}
               sideMenu={false}
-              data-theming-mf-rte>
+              data-theming-blocknote-multifield>
               <ThreadsSidebar filter={commentFilter} sort={commentSort} />
             </BlockNoteView>
           )}

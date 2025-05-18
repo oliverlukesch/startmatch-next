@@ -150,7 +150,7 @@ export default function CollabEditor({documentName, user, appId, ...props}: Coll
       renderEditor={false}
       comments={false}
       sideMenu={false}
-      data-theming-primary-rte
+      data-theming-blocknote-simple
       {...props}>
       <div className="flex h-full flex-row">
         <div className="flex-1">
