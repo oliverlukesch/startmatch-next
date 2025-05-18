@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 
 'use client'
@@ -17,7 +17,10 @@ import {VersioningModal} from './VersioningModal.jsx'
 import './style.css'
 import {renderDate} from './utils.js'
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
+
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 
 const colors = ['#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8', '#94FADB', '#B9F18D']
@@ -130,7 +133,7 @@ const MenuBar = ({editor}) => {
   )
 }
 
-export const TestEditor = () => {
+export const Editor = () => {
   const [latestVersion, setLatestVersion] = React.useState(null)
   const [currentVersion, setCurrentVersion] = React.useState(null)
   const [versions, setVersions] = React.useState([])
@@ -184,7 +187,7 @@ export const TestEditor = () => {
       provider.off('synced', onSynced)
       doc.off('update', onUpdate)
     }
-  }, [doc])
+  }, [])
 
   const [commitDescription, setCommitDescription] = React.useState('')
 

@@ -21,7 +21,7 @@ import * as Y from 'yjs'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 
-import {ThreadsSidebar} from './MFThreadsSidebar'
+import {ThreadsSidebar} from './CustomThreadsSidebar'
 import './style.css'
 
 // TYPES AND ENUMS

@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {CollabEditor} from '@/components/specific/CollabEditor'
+import {BlockNote} from '@/components/specific/BlockNote'
 
 export default function App() {
   const userName = `user_${Math.round(Math.random() * 1000)}`
@@ -10,7 +10,7 @@ export default function App() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <h2 className="text-2xl font-semibold">User name: {userName}</h2>
-      <CollabEditor
+      <BlockNote
         appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
         documentName="dev.document"
         user={{

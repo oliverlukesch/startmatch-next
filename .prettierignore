@@ -13,4 +13,4 @@ yarn.lock
 /src/components/ui
 
 # for testing things out
-/src/components/specific/TestEditor
+/src/components/specific/TipTapVersioned
