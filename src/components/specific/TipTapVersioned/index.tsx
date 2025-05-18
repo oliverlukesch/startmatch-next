@@ -68,7 +68,7 @@ const provider = new TiptapCollabProvider({
   name: `room-collab-history-${dayOfTheYear}`,
   document: doc,
   token:
-    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NDcyMTMzNjUsIm5iZiI6MTc0NzIxMzM2NSwiZXhwIjoxNzQ3Mjk5NzY1LCJpc3MiOiJodHRwczovL2Nsb3VkLnRpcHRhcC5kZXYiLCJhdWQiOiJ5OXc1cGpvOSJ9.jQunD81DGphtf5PwvsVeSS1vyH7Dv2H5UHVDUK6UByU',
+    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NDc1ODk1ODIsIm5iZiI6MTc0NzU4OTU4MiwiZXhwIjoxNzQ3Njc1OTgyLCJpc3MiOiJodHRwczovL2Nsb3VkLnRpcHRhcC5kZXYiLCJhdWQiOiJ5OXc1cGpvOSJ9.7vDaGG_OTmCawBcVJU3Swui2bbsYyJGsXU7WMbhutko',
   user: pickedName,
 })
 
