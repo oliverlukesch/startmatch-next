@@ -16,12 +16,8 @@ A Next.js application for automated grants management.
 
 ### Code Quality
 
-- ESLint for linting
-- Prettier for code formatting
-  - Sorts imports using @trivago/prettier-plugin-sort-imports
-  - Formats Tailwind classes using prettier-plugin-tailwindcss
-- Husky for git hooks
-- lint-staged for running linters on staged files
+- Use `pnpm lint` for checking the code quality after performing changes
+  - It executes the following command: `prettier . --check && next lint && tsc --noEmit`
 
 ### Conventions
 
@@ -50,11 +46,13 @@ A Next.js application for automated grants management.
 
 ### UI Components
 
-The project uses shadcn/ui components with the following characteristics:
-- Base color scheme: slate
-- CSS variables for theming
-- All components use the "slot" pattern from Radix UI
-- Components include data-* attributes for styling and testing
+- The project uses shadcn/ui components with the following characteristics:
+  - Base color scheme: slate
+  - CSS variables for theming
+  - All components use the "slot" pattern from Radix UI
+  - Components include data-* attributes for styling and testing
+
+- Use `pnpm dlx shadcn@latest add {{component name}}` for installing new components
 
 ### Important
 
