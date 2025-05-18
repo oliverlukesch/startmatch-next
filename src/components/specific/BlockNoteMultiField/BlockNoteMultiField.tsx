@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useState} from 'react'
 
 import {
+  BlockNoteEditor,
   BlockNoteSchema,
   defaultBlockSpecs,
   defaultInlineContentSpecs,
@@ -26,9 +27,10 @@ import './style.css'
 
 // TYPES AND ENUMS
 
-export type CollabEditorProps = {
+export type EditorProps = {
   className?: string
   documentName: string
+  documentFields: string[]
   appId: string
   user: {
     name: string
@@ -95,17 +97,77 @@ async function resolveUsers(userIds: string[]): Promise<User[]> {
   }))
 }
 
+// EDITOR FIELD COMPONENT
+
+interface EditorFieldProps {
+  fieldName: string
+  provider: TiptapCollabProvider
+  threadStore: TiptapThreadStore
+  user: {name: string; color: string}
+  doc: Y.Doc
+  setActiveEditor: (editor: BlockNoteEditor, fieldName: string) => void
+}
+
+const EditorField = ({
+  fieldName,
+  provider,
+  threadStore,
+  user,
+  doc,
+  setActiveEditor,
+}: EditorFieldProps) => {
+  const editor = useCreateBlockNote(
+    {
+      animations: false,
+      schema,
+      collaboration: {
+        provider,
+        fragment: doc.getXmlFragment(fieldName),
+        user: {
+          name: user.name,
+          color: user.color,
+        },
+        showCursorLabels: 'activity',
+      },
+      comments: {
+        threadStore,
+      },
+      resolveUsers,
+      dictionary: blockNoteDE,
+    },
+    [provider, threadStore, fieldName],
+  )
+
+  return (
+    <BlockNoteView
+      editor={editor}
+      sideMenu={false}
+      onSelectionChange={() => {
+        // @ts-expect-error: ignoring for now
+        setActiveEditor(editor, fieldName)
+      }}
+      data-theming-blocknote-multifield
+    />
+  )
+}
+
 // MAIN COMPONENT
 
-export default function CollabEditor({documentName, user, appId}: CollabEditorProps) {
-  const [activeEditor, setActiveEditor] = useState<unknown | null>(null)
+export default function CollabEditor({
+  documentName,
+  user,
+  appId,
+  documentFields,
+  className,
+}: EditorProps) {
+  const [activeEditorData, setActiveEditorData] = useState<{
+    editor: BlockNoteEditor
+    fieldName: string
+  } | null>(null)
 
   const [sidebarTab, setSidebarTab] = useState<TabContent>(TabContent.Comments)
   const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
   const [commentSort, setCommentSort] = useState<CommentSortOrder>(CommentSortOrder.Position)
-
-  // console.log('doc', doc)
-  // console.log(doc.getXmlFragment('section-1').toJSON())
 
   const provider = useMemo(() => {
     return new TiptapCollabProvider({
@@ -124,83 +186,35 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
     )
   }, [user, provider])
 
-  const editor1 = useCreateBlockNote(
-    {
-      animations: false,
-      schema,
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment('section-1'),
-        user: {
-          name: user.name,
-          color: user.color,
-        },
-        showCursorLabels: 'activity',
-      },
-      comments: {
-        threadStore,
-      },
-      resolveUsers,
-      dictionary: blockNoteDE,
-    },
-    [provider, threadStore],
-  )
-
-  const editor2 = useCreateBlockNote(
-    {
-      animations: false,
-      schema,
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment('section-2'),
-        user: {
-          name: user.name,
-          color: user.color,
-        },
-        showCursorLabels: 'activity',
-      },
-      comments: {
-        threadStore,
-      },
-      resolveUsers,
-      dictionary: blockNoteDE,
-    },
-    [provider, threadStore],
-  )
-
   useEffect(() => {
-    if (!activeEditor) setActiveEditor(editor1)
-  }, [activeEditor, editor1])
-
-  useEffect(() => {
-    if (activeEditor) {
-      // @ts-expect-error: ignoring for now
-      console.log('active editor comments', activeEditor.comments.threadStore.getThreads())
-      console.log(JSON.stringify(TiptapTransformer.fromYdoc(doc, 'section-1')))
+    if (activeEditorData) {
+      console.log(
+        'active editor comments',
+        // @ts-expect-error: ignoring for now
+        activeEditorData.editor.comments.threadStore.getThreads(),
+      )
+      console.log(JSON.stringify(TiptapTransformer.fromYdoc(doc, activeEditorData.fieldName)))
     }
-  }, [activeEditor])
+  }, [activeEditorData])
+
+  const handleSetActiveEditor = (editor: BlockNoteEditor, fieldName: string) => {
+    setActiveEditorData({editor, fieldName})
+  }
 
   return (
-    <div className="flex h-full flex-row overflow-hidden rounded-xl border">
+    <div className={`flex h-full flex-row overflow-hidden rounded-xl border ${className || ''}`}>
       <div className="flex flex-1 flex-col">
-        <BlockNoteView
-          editor={editor1}
-          // comments={false}
-          sideMenu={false}
-          onSelectionChange={() => {
-            if (activeEditor !== editor1) setActiveEditor(editor1)
-          }}
-          data-theming-blocknote-multifield
-        />
-        <BlockNoteView
-          editor={editor2}
-          // comments={false}
-          sideMenu={false}
-          onSelectionChange={() => {
-            if (activeEditor !== editor2) setActiveEditor(editor2)
-          }}
-          data-theming-blocknote-multifield
-        />
+        {documentFields.map(fieldName => (
+          <EditorField
+            key={fieldName}
+            fieldName={fieldName}
+            provider={provider}
+            threadStore={threadStore}
+            user={user}
+            doc={doc}
+            setActiveEditor={handleSetActiveEditor}
+          />
+        ))}
       </div>
 
       <Tabs
@@ -241,10 +255,9 @@ export default function CollabEditor({documentName, user, appId}: CollabEditorPr
             </Select>
           </div>
 
-          {!!activeEditor && (
+          {!!activeEditorData && (
             <BlockNoteView
-              // @ts-expect-error: ignoring for now
-              editor={activeEditor}
+              editor={activeEditorData.editor}
               renderEditor={false}
               comments={false}
               sideMenu={false}

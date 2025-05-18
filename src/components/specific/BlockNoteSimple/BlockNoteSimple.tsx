@@ -29,7 +29,7 @@ import './style.css'
 
 // TYPES AND ENUMS
 
-export type CollabEditorProps = {
+export type EditorProps = {
   className?: string
   documentName: string
   appId: string
@@ -100,7 +100,7 @@ async function resolveUsers(userIds: string[]): Promise<User[]> {
 
 // MAIN COMPONENT
 
-export default function CollabEditor({documentName, user, appId, ...props}: CollabEditorProps) {
+export default function Editor({documentName, user, appId, ...props}: EditorProps) {
   const [sidebarTab, setSidebarTab] = useState<TabContent>(TabContent.Comments)
   const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
   const [commentSort, setCommentSort] = useState<CommentSortOrder>(CommentSortOrder.Position)
