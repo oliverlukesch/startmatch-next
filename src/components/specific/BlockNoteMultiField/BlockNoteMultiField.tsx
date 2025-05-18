@@ -28,15 +28,17 @@ import './style.css'
 // TYPES AND ENUMS
 
 export type EditorProps = {
-  className?: string
-  documentName: string
-  documentFields: string[]
   appId: string
+  document: {
+    name: string
+    fields: string[]
+  }
   user: {
     name: string
     color: string
     token: string
   }
+  className?: string
 }
 
 enum CommentFilterStatus {
@@ -153,13 +155,7 @@ const EditorField = ({
 
 // MAIN COMPONENT
 
-export default function CollabEditor({
-  documentName,
-  user,
-  appId,
-  documentFields,
-  className,
-}: EditorProps) {
+export default function CollabEditor({appId, document, user, className}: EditorProps) {
   const [activeEditorData, setActiveEditorData] = useState<{
     editor: BlockNoteEditor
     fieldName: string
@@ -172,11 +168,11 @@ export default function CollabEditor({
   const provider = useMemo(() => {
     return new TiptapCollabProvider({
       appId: appId,
-      name: documentName,
+      name: document.name,
       token: user.token,
       document: doc,
     })
-  }, [documentName, user, appId])
+  }, [document, user, appId])
 
   const threadStore = useMemo(() => {
     return new TiptapThreadStore(
@@ -204,7 +200,7 @@ export default function CollabEditor({
   return (
     <div className={`flex h-full flex-row overflow-hidden rounded-xl border ${className || ''}`}>
       <div className="flex flex-1 flex-col">
-        {documentFields.map(fieldName => (
+        {document.fields.map(fieldName => (
           <EditorField
             key={fieldName}
             fieldName={fieldName}
