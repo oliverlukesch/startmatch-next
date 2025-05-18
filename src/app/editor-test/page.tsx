@@ -1,4 +1,4 @@
-import {CollabEditor} from '@/components/specific/TipTapVersioned'
+import {CollabEditor} from '@/components/specific/TipTapVersionedShadCn'
 
 export default function App() {
   return (
