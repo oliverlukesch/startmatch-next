@@ -18,6 +18,7 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
+import {EditorToolbar} from './EditorToolbar'
 import './style.css'
 
 // TYPES AND ENUMS
@@ -181,6 +182,7 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     <div className={cn('flex overflow-hidden rounded-xl border', className)}>
       {/* EDITOR FIELDS */}
       <div className="flex flex-1 flex-col">
+        <EditorToolbar editor={activeField?.editor || null} />
         <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
           {document.fields.map((fieldName, index) => (
             <div className="flex flex-col gap-2" key={fieldName}>
