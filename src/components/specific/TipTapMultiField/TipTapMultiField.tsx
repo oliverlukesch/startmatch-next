@@ -36,36 +36,27 @@ export type EditorProps = {
   className?: string
 }
 
-// EDITOR SETUP
-
-const doc = new Y.Doc()
-
 // EDITOR FIELD COMPONENT
 
-function getOrCreateSubField(doc: Y.Doc, subFieldName: string): Y.XmlFragment {
-  let defaultField = doc.get('default')
+function getOrCreateSubFragment(doc: Y.Doc, subFieldName: string): Y.XmlFragment {
+  const defaultMap = doc.getMap('default')
+  let subFragment = defaultMap.get(subFieldName) as Y.XmlFragment
 
-  if (!defaultField || !(defaultField instanceof Y.Map)) {
-    defaultField = doc.getMap('default')
+  if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
+    console.log('Creating new subFragment:', subFieldName)
+
+    subFragment = new Y.XmlFragment()
+    defaultMap.set(subFieldName, subFragment)
   }
 
-  const defaultMap = defaultField as Y.Map<unknown>
-
-  let subField = defaultMap.get(subFieldName) as Y.XmlFragment
-
-  if (!subField || !(subField instanceof Y.XmlFragment)) {
-    subField = new Y.XmlFragment()
-    defaultMap.set(subFieldName, subField)
-  }
-
-  return subField
+  return subFragment
 }
 
 interface EditorFieldProps {
   fieldName: string
   provider: TiptapCollabProvider
   user: {name: string; color: string}
-  doc: Y.Doc
+  yDoc: Y.Doc
   isProviderSynced: boolean
   setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
   isPrimary: boolean
@@ -77,7 +68,7 @@ const EditorField = ({
   fieldName,
   provider,
   user,
-  doc,
+  yDoc,
   isProviderSynced,
   setActiveField,
   isPrimary,
@@ -86,8 +77,8 @@ const EditorField = ({
 }: EditorFieldProps) => {
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
-    return getOrCreateSubField(doc, fieldName)
-  }, [fieldName, doc, isProviderSynced])
+    return getOrCreateSubFragment(yDoc, fieldName)
+  }, [fieldName, yDoc, isProviderSynced])
 
   const editor = useEditor(
     {
@@ -98,7 +89,7 @@ const EditorField = ({
         ...(subFragment
           ? [
               Collaboration.configure({
-                document: doc,
+                document: yDoc,
                 fragment: subFragment,
               }),
               CollaborationCursor.configure({
@@ -146,13 +137,17 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     null,
   )
 
-  const provider = useMemo(() => {
-    return new TiptapCollabProvider({
+  const [yDoc, provider] = useMemo(() => {
+    const yDoc = new Y.Doc()
+
+    const provider = new TiptapCollabProvider({
       appId: appId,
       name: document.name,
       token: user.token,
-      document: doc,
+      document: yDoc,
     })
+
+    return [yDoc, provider]
   }, [document, user, appId])
 
   function onPrimaryHistoryUpdate(data: CollabOnUpdateProps) {
@@ -170,23 +165,16 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     const onSynced = () => {
       console.log('Provider synced')
       setIsProviderSynced(true)
-      doc.on('update', onUpdate)
+      yDoc.on('update', onUpdate)
     }
 
     provider.on('synced', onSynced)
 
-    CollaborationHistory.configure({
-      provider,
-      onUpdate: data => {
-        console.log('History update:', data)
-      },
-    })
-
     return () => {
       provider.off('synced', onSynced)
-      doc.off('update', onUpdate)
+      yDoc.off('update', onUpdate)
     }
-  }, [provider])
+  }, [yDoc, provider])
 
   return (
     <div className={cn('flex flex-1 flex-col gap-3', className)}>
@@ -249,7 +237,7 @@ export default function CollabEditor({document, user, appId, className}: EditorP
             fieldName={fieldName}
             provider={provider}
             user={user}
-            doc={doc}
+            yDoc={yDoc}
             isProviderSynced={isProviderSynced}
             setActiveField={setActiveField}
             isPrimary={index === 0}
