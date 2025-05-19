@@ -16,6 +16,11 @@ A Next.js application for automated grants management.
 
 ### Code Quality
 
+- Keep things minimal
+  - Do not implement features that were not asked for, unless they are absolutely required
+  - Avoid DIV nesting, complex Tailwind styles and other unnecessary things
+  - Less code is usually better
+
 - Use `pnpm lint` for checking the code quality after performing changes
   - It executes the following command: `prettier . --check && next lint && tsc --noEmit`
 
