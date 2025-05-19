@@ -13,8 +13,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <h2 className="text-2xl font-semibold">User name: {userName}</h2>
+    <div className="flex max-h-screen flex-1 p-4">
       <TipTapMultiField
         appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
         document={document}
@@ -23,7 +22,7 @@ export default function App() {
           color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
           token: userToken,
         }}
-        className="min-h-80"
+        className="flex-1"
       />
     </div>
   )

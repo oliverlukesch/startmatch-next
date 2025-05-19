@@ -43,8 +43,6 @@ function getOrCreateSubFragment(doc: Y.Doc, subFieldName: string): Y.XmlFragment
   let subFragment = defaultMap.get(subFieldName) as Y.XmlFragment
 
   if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
-    console.log('Creating new subFragment:', subFieldName)
-
     subFragment = new Y.XmlFragment()
     defaultMap.set(subFieldName, subFragment)
   }
@@ -61,6 +59,8 @@ interface EditorFieldProps {
   setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
+  // CollaborationHistory only works inside the editor context which is why we
+  // pipe through the update event
   onPrimaryHistoryUpdate: (data: CollabOnUpdateProps) => void
 }
 
@@ -132,6 +132,8 @@ export default function CollabEditor({document, user, appId, className}: EditorP
   const [versions, setVersions] = useState<CollabHistoryVersion[]>([])
   const [currentVersion, setCurrentVersion] = useState<number | undefined>()
 
+  // document / YJS related actions on the primary editor also apply to the
+  // other editors (e.g. create version, revert version, etc.)
   const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
   const [activeField, setActiveField] = useState<{fieldName: string; editor: Editor | null} | null>(
     null,
@@ -151,7 +153,6 @@ export default function CollabEditor({document, user, appId, className}: EditorP
   }, [document, user, appId])
 
   function onPrimaryHistoryUpdate(data: CollabOnUpdateProps) {
-    console.log('History update:', data)
     setVersions(data.versions)
     setCurrentVersion(data.currentVersion)
   }
@@ -177,75 +178,86 @@ export default function CollabEditor({document, user, appId, className}: EditorP
   }, [yDoc, provider])
 
   return (
-    <div className={cn('flex flex-1 flex-col gap-3', className)}>
-      {activeField && <h2 className="text-xl font-semibold">Active: {activeField?.fieldName}</h2>}
-
-      <div className="flex justify-between gap-6 rounded-xl border p-2">
-        <div className="flex flex-col gap-3">
-          <Button
-            onClick={() => {
-              console.log(
-                provider.configuration.document.share.forEach((item, key) => {
-                  console.log(key, item.toJSON())
-                }),
-              )
-            }}>
-            Log document
-          </Button>
-
-          <Button
-            disabled={!hasChanges}
-            onClick={() => {
-              if (!primaryEditor) return
-              primaryEditor.commands.saveVersion(`version-${Date.now()}`)
-              setHasChanges(false)
-            }}>
-            Save version
-          </Button>
+    <div className={cn('flex overflow-hidden rounded-xl border', className)}>
+      {/* EDITOR FIELDS */}
+      <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
+          {document.fields.map((fieldName, index) => (
+            <div className="flex flex-col gap-2" key={fieldName}>
+              <h4 className="text-md font-semibold text-muted-foreground uppercase">{fieldName}</h4>
+              <EditorField
+                fieldName={fieldName}
+                provider={provider}
+                user={user}
+                yDoc={yDoc}
+                isProviderSynced={isProviderSynced}
+                setActiveField={setActiveField}
+                isPrimary={index === 0}
+                setPrimaryEditor={setPrimaryEditor}
+                onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
+              />
+            </div>
+          ))}
         </div>
 
-        <ul className="list-disc pl-5">
-          {versions.map(version => (
-            <li key={version.version} className="flex items-center justify-between gap-2">
-              <span>
-                {version.version}: {version.name}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!primaryEditor) return
-                  primaryEditor.commands.revertToVersion(version.version)
-                }}>
-                Revert
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex shrink-0 gap-4 border-t px-4 py-2">
+          <span className="text-muted-foreground">
+            Current User: <span className="font-semibold text-foreground">{user.name}</span>
+          </span>
 
-        {currentVersion && (
-          <div>
-            Current version: {currentVersion} - {new Date(currentVersion).toLocaleString()}
-          </div>
-        )}
+          <span className="text-muted-foreground">
+            Active Field:{' '}
+            <span className="font-semibold text-foreground uppercase">
+              {activeField?.fieldName || 'None'}
+            </span>
+          </span>
+        </div>
       </div>
 
-      {document.fields.map((fieldName, index) => (
-        <div key={fieldName}>
-          <h3 className="text-lg font-semibold">{fieldName}</h3>
-          <EditorField
-            fieldName={fieldName}
-            provider={provider}
-            user={user}
-            yDoc={yDoc}
-            isProviderSynced={isProviderSynced}
-            setActiveField={setActiveField}
-            isPrimary={index === 0}
-            setPrimaryEditor={setPrimaryEditor}
-            onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
-          />
-        </div>
-      ))}
+      {/* SIDEBAR */}
+      <div className="flex w-80 shrink-0 flex-col gap-4 overflow-scroll border-l bg-slate-50 p-4">
+        <Button
+          onClick={() => {
+            console.log(
+              provider.configuration.document.share.forEach((item, key) => {
+                console.log(key, item.toJSON())
+              }),
+            )
+          }}>
+          Log document
+        </Button>
+
+        <Button
+          disabled={!hasChanges}
+          onClick={() => {
+            if (!primaryEditor) return
+            primaryEditor.commands.saveVersion(`version-${Date.now()}`)
+            setHasChanges(false)
+          }}>
+          Save version
+        </Button>
+
+        {currentVersion && (
+          <div className="text-center text-lg text-muted-foreground">
+            Current version: <span className="font-semibold text-foreground">{currentVersion}</span>
+          </div>
+        )}
+
+        {versions.map(version => (
+          <div key={version.version} className="flex items-center justify-between gap-2">
+            {version.version}: {version.name}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!primaryEditor) return
+                primaryEditor.commands.revertToVersion(version.version)
+              }}>
+              Revert
+            </Button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
