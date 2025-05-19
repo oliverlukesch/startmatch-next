@@ -37,8 +37,6 @@ interface Version {
   date: string | number | Date
 }
 
-const doc = new Y.Doc()
-
 interface MenuBarProps {
   editor: Editor | null
 }
@@ -152,19 +150,23 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
     setVersioningModalOpen(true)
   }, [])
 
-  const provider = useMemo(() => {
-    return new TiptapCollabProvider({
+  const [yDoc, provider] = useMemo(() => {
+    const yDoc = new Y.Doc()
+
+    const provider = new TiptapCollabProvider({
       appId: appId,
       name: documentName,
       token: user.token,
-      document: doc,
+      document: yDoc,
     })
+
+    return [yDoc, provider]
   }, [documentName, user, appId])
 
   const childFragment = useMemo(() => {
     if (!synced) return null
-    return getOrCreateSubField(doc, 'custom-2')
-  }, [synced])
+    return getOrCreateSubField(yDoc, 'custom-2')
+  }, [synced, yDoc])
 
   const editor = useEditor(
     {
@@ -175,7 +177,7 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
         ...(childFragment
           ? [
               Collaboration.configure({
-                document: doc,
+                document: yDoc,
                 fragment: childFragment,
               }),
               CollaborationCursor.configure({
@@ -195,7 +197,7 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
           : []),
       ],
     },
-    [provider, user, childFragment],
+    [provider, user, childFragment, yDoc],
   )
 
   useEffect(() => {
@@ -206,16 +208,16 @@ export const CollabEditor = ({documentName, user, appId}: EditorProps) => {
     const onSynced = () => {
       console.log('Synced')
       setSynced(true)
-      doc.on('update', onUpdate)
+      yDoc.on('update', onUpdate)
     }
 
     provider.on('synced', onSynced)
 
     return () => {
       provider.off('synced', onSynced)
-      doc.off('update', onUpdate)
+      yDoc.off('update', onUpdate)
     }
-  }, [provider])
+  }, [provider, yDoc])
 
   const handleCommitDescriptionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCommitDescription(event.target.value)
