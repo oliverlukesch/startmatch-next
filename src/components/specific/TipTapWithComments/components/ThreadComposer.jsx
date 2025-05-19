@@ -1,9 +1,9 @@
 import {useCallback, useState} from 'react'
 
-import {useUser} from '../hooks/useUser'
+import {useThreadsState} from '../context'
 
 export const ThreadComposer = ({threadId, provider}) => {
-  const user = useUser()
+  const {user} = useThreadsState()
   const [comment, setComment] = useState('')
 
   const handleSubmit = useCallback(

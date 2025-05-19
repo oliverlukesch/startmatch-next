@@ -1,3 +1,25 @@
+:root {
+  --white: #fff;
+  --black: #2e2b29;
+  --black-contrast: #110f0e;
+  --gray-1: rgba(61, 37, 20, 0.05);
+  --gray-2: rgba(61, 37, 20, 0.08);
+  --gray-3: rgba(61, 37, 20, 0.12);
+  --gray-4: rgba(53, 38, 28, 0.3);
+  --gray-5: rgba(28, 25, 23, 0.6);
+  --green: #22c55e;
+  --purple: #6a00f5;
+  --purple-contrast: #5800cc;
+  --purple-light: rgba(88, 5, 255, 0.05);
+  --yellow-contrast: #facc15;
+  --yellow: rgba(250, 204, 21, 0.4);
+  --yellow-light: #fffae5;
+  --red: #ff5c33;
+  --red-light: #ffebe5;
+  --red-light-contrast: #ffd6cc;
+  --shadow: 0px 12px 33px 0px rgba(0, 0, 0, 0.06), 0px 3.618px 9.949px 0px rgba(0, 0, 0, 0.04);
+}
+
 /* Basic editor styles */
 .tiptap {
   :first-child {
@@ -524,17 +546,17 @@ body {
   }
 }
 
-/* [data-viewmode="open"] .tiptap .tiptap-thread:not([data-status="closed"]),
-[data-viewmode="resolved"] .tiptap .tiptap-thread:not([data-status="open"]) {
-  &[data-type="block"] {
+[data-viewmode='open'] .tiptap .tiptap-thread:not([data-status='closed']),
+[data-viewmode='resolved'] .tiptap .tiptap-thread:not([data-status='open']) {
+  &[data-type='block'] {
     > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
       background-color: var(--yellow);
       outline-color: var(--yellow);
     }
 
     &:hover,
-    &[data-state="selected"],
-    &[data-state="hovered"] {
+    &[data-state='selected'],
+    &[data-state='hovered'] {
       > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
         background-color: var(--yellow-contrast);
         outline-color: var(--yellow-contrast);
@@ -542,13 +564,13 @@ body {
     }
   }
 
-  &[data-type="inline"] {
+  &[data-type='inline'] {
     border-bottom: 2px dashed var(--yellow-contrast);
 
     &:hover,
-    &[data-state="selected"],
-    &[data-state="hovered"] {
+    &[data-state='selected'],
+    &[data-state='hovered'] {
       background-color: var(--yellow);
     }
   }
-} */
+}

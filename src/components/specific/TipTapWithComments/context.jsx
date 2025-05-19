@@ -4,6 +4,7 @@ export const ThreadsContext = createContext({
   threads: [],
   selectedThreads: [],
   selectedThread: null,
+  user: null,
 
   onClickThread: () => null,
   deleteThread: () => null,
@@ -19,6 +20,7 @@ export const ThreadsProvider = ({
   threads = [],
   selectedThreads = [],
   selectedThread = null,
+  user = null,
   onClickThread = () => null,
   onDeleteThread = () => null,
   onResolveThread = () => null,
@@ -46,6 +48,7 @@ export const ThreadsProvider = ({
     threads,
     selectedThreads,
     selectedThread,
+    user,
 
     deleteThread: onDeleteThread,
     resolveThread: onResolveThread,

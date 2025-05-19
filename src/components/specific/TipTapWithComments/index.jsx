@@ -1,6 +1,6 @@
 'use client'
 
-import {useCallback, useRef, useState} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import {CommentsKit, hoverOffThread, hoverThread} from '@tiptap-pro/extension-comments'
@@ -10,71 +10,108 @@ import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import {v4 as uuid} from 'uuid'
 import * as Y from 'yjs'
 
 import {ThreadsList} from './components/ThreadsList'
 import {ThreadsProvider} from './context'
 import {useThreads} from './hooks/useThreads'
-import {useUser} from './hooks/useUser'
 import './style.css'
 
-const doc = new Y.Doc()
+function getOrCreateSubField(doc, subFieldName) {
+  let defaultField = doc.get('default')
+  if (!defaultField || !(defaultField instanceof Y.Map)) {
+    defaultField = doc.getMap('default')
+  }
+  const defaultMap = defaultField
+  let subField = defaultMap.get(subFieldName)
+  if (!subField || !(subField instanceof Y.XmlFragment)) {
+    subField = new Y.XmlFragment()
+    defaultMap.set(subFieldName, subField)
+  }
+  return subField
+}
 
-const isDev = true
-const id = isDev ? 'dev' : uuid()
-
-const provider = new TiptapCollabProvider({
-  appId: '7j9y6m10',
-  name: `tiptap-comments-demo/${id}`,
-  document: doc,
-})
-
-export default () => {
+export default ({appId, documentName, user}) => {
   const [showUnresolved, setShowUnresolved] = useState(true)
   const [selectedThread, setSelectedThread] = useState(null)
+  const [synced, setSynced] = useState(false)
   const threadsRef = useRef([])
 
-  const user = useUser()
+  const [yDoc, provider] = useMemo(() => {
+    const yDocInstance = new Y.Doc()
+    const providerInstance = new TiptapCollabProvider({
+      appId: appId,
+      name: documentName,
+      document: yDocInstance,
+      ...(user.token && {token: user.token}),
+    })
+    return [yDocInstance, providerInstance]
+  }, [appId, documentName, user.token])
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        history: false,
-      }),
-      Image,
-      Collaboration.configure({
-        document: doc,
-      }),
-      CollaborationCursor.configure({
-        provider,
-        user: {
-          name: user.name,
-          color: user.color,
-        },
-      }),
-      CommentsKit.configure({
-        provider,
-        useLegacyWrapping: false,
-        onClickThread: threadId => {
-          const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt
+  const childFragment = useMemo(() => {
+    if (!synced) return null
+    return getOrCreateSubField(yDoc, 'comments-fragment')
+  }, [synced, yDoc])
 
-          if (!threadId || isResolved) {
-            setSelectedThread(null)
-            editor?.chain().unselectThread().run()
-            return
-          }
+  useEffect(() => {
+    const onSynced = () => {
+      console.log('Synced (Comments Editor)')
+      setSynced(true)
+    }
 
-          setSelectedThread(threadId)
-          editor?.chain().selectThread({id: threadId, updateSelection: false}).run()
-        },
-      }),
-      Placeholder.configure({
-        placeholder: 'Write a text to add comments …',
-      }),
-    ],
-  })
+    provider.on('synced', onSynced)
+
+    return () => {
+      provider.off('synced', onSynced)
+    }
+  }, [provider])
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      extensions: [
+        StarterKit.configure({
+          history: false,
+        }),
+        Image,
+        ...(childFragment
+          ? [
+              Collaboration.configure({
+                document: yDoc,
+                fragment: childFragment,
+              }),
+              CollaborationCursor.configure({
+                provider,
+                user: {
+                  name: user.name,
+                  color: user.color,
+                },
+              }),
+              CommentsKit.configure({
+                provider,
+                useLegacyWrapping: false,
+                onClickThread: threadId => {
+                  const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt
+
+                  if (!threadId || isResolved) {
+                    setSelectedThread(null)
+                    editor?.chain().unselectThread?.().run()
+                    return
+                  }
+
+                  setSelectedThread(threadId)
+                  editor?.chain().selectThread?.({id: threadId, updateSelection: false}).run()
+                },
+              }),
+            ]
+          : []),
+        Placeholder.configure({
+          placeholder: 'Write a text to add comments …',
+        }),
+      ],
+    },
+    [provider, user, childFragment, yDoc],
+  )
 
   const {threads = [], createThread} = useThreads(provider, editor, user)
 
@@ -147,10 +184,11 @@ export default () => {
       onResolveThread={resolveThread}
       onUpdateComment={updateComment}
       onUnresolveThread={unresolveThread}
-      selectedThreads={editor.storage.comments.focusedThreads}
+      selectedThreads={editor?.storage?.comments?.focusedThreads || []}
       selectedThread={selectedThread}
       setSelectedThread={setSelectedThread}
-      threads={threads}>
+      threads={threads}
+      user={user}>
       <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
         <div className="main">
           <div className="control-group">
