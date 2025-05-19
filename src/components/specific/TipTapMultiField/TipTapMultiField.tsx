@@ -1,29 +1,24 @@
 'use client'
 
-import {memo, useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
-import CollaborationHistory, {
+import {
   CollabHistoryVersion,
   CollabOnUpdateProps,
 } from '@tiptap-pro/extension-collaboration-history'
 import {Editor, EditorEvents} from '@tiptap/core'
-import {Collaboration} from '@tiptap/extension-collaboration'
-import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
-import {EditorContent, useEditor} from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
 import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
+import {EditorField} from './EditorField'
 import {EditorToolbar} from './EditorToolbar'
 import './style.css'
 
-// TYPES AND ENUMS
-
-export type EditorProps = {
+export interface EditorProps {
   appId: string
   document: {
     name: string
@@ -36,102 +31,6 @@ export type EditorProps = {
   }
   className?: string
 }
-
-// EDITOR FIELD COMPONENT
-
-function getOrCreateSubFragment(doc: Y.Doc, subFieldName: string): Y.XmlFragment {
-  const defaultMap = doc.getMap('default')
-  let subFragment = defaultMap.get(subFieldName) as Y.XmlFragment
-
-  if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
-    subFragment = new Y.XmlFragment()
-    defaultMap.set(subFieldName, subFragment)
-  }
-
-  return subFragment
-}
-
-interface EditorFieldProps {
-  fieldName: string
-  provider: TiptapCollabProvider
-  user: {name: string; color: string}
-  yDoc: Y.Doc
-  isProviderSynced: boolean
-  setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
-  isPrimary: boolean
-  setPrimaryEditor: (editor: Editor | null) => void
-  // required as CollaborationHistory only works inside the editor context
-  onPrimaryHistoryUpdate: (data: CollabOnUpdateProps) => void
-  // required to trigger a re-render of the EditorToolbar when the selection
-  // changes (which is required for highlighting the correct buttons)
-  onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
-}
-
-const EditorField = memo(function EditorField({
-  fieldName,
-  provider,
-  user,
-  yDoc,
-  isProviderSynced,
-  setActiveField,
-  isPrimary,
-  setPrimaryEditor,
-  onPrimaryHistoryUpdate,
-  onSelectionUpdate,
-}: EditorFieldProps) {
-  // leave for debugging
-  // console.log('render EditorFieldProps', fieldName)
-
-  const subFragment = useMemo(() => {
-    if (!isProviderSynced) return null
-    return getOrCreateSubFragment(yDoc, fieldName)
-  }, [fieldName, yDoc, isProviderSynced])
-
-  const editor = useEditor(
-    {
-      extensions: [
-        StarterKit.configure({
-          history: false,
-        }),
-        ...(subFragment
-          ? [
-              Collaboration.configure({
-                document: yDoc,
-                fragment: subFragment,
-              }),
-              CollaborationCursor.configure({
-                provider,
-                user,
-              }),
-              CollaborationHistory.configure({
-                provider,
-                onUpdate: data => {
-                  if (isPrimary) onPrimaryHistoryUpdate(data)
-                },
-              }),
-            ]
-          : []),
-      ],
-      // helps with SSR
-      immediatelyRender: false,
-      // default in V3, might increase performance
-      shouldRerenderOnTransaction: false,
-      onFocus: () => {
-        setActiveField({fieldName, editor})
-      },
-      onSelectionUpdate,
-    },
-    [fieldName, provider, user, subFragment],
-  )
-
-  useEffect(() => {
-    if (isPrimary) setPrimaryEditor(editor)
-  }, [editor, isPrimary, setPrimaryEditor])
-
-  return <EditorContent editor={editor} className="editor-field" />
-})
-
-// MAIN COMPONENT
 
 // TODO: take another stab at render performance, see here:
 // https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
