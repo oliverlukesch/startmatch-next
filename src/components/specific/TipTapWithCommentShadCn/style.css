@@ -1,0 +1,193 @@
+/* Basic editor styles */
+.tiptap {
+  :first-child {
+    margin-top: 0;
+  }
+
+  /* List styles */
+  ul,
+  ol {
+    padding: 0 1rem;
+    margin: 1.25rem 1rem 1.25rem 0.4rem;
+
+    li p {
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
+    }
+  }
+
+  /* Heading styles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.1;
+    margin-top: 2.5rem;
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2 {
+    margin-top: 3.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: 1rem;
+  }
+
+  /* Code and preformatted text styles */
+  code {
+    @apply rounded-md bg-purple-50 px-1 py-0.5 text-[0.85rem] text-black;
+  }
+
+  pre {
+    @apply my-6 rounded-lg bg-black p-3 font-mono text-white;
+
+    code {
+      @apply bg-transparent p-0 text-sm text-inherit;
+    }
+  }
+
+  blockquote {
+    @apply my-6 border-l-2 border-muted pl-4;
+  }
+
+  hr {
+    @apply my-8 border-t border-none border-muted;
+  }
+
+  /* Placeholder */
+  .is-empty::before {
+    @apply text-muted-foreground;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* Image styling */
+  img {
+    @apply my-6 block h-auto max-w-full;
+
+    &.ProseMirror-selectednode {
+      @apply outline outline-2 outline-primary;
+    }
+  }
+
+  /* Give a remote user a caret */
+  .collaboration-cursor__caret {
+    border-left: 1px solid #0d0d0d;
+    border-right: 1px solid #0d0d0d;
+    margin-left: -1px;
+    margin-right: -1px;
+    pointer-events: none;
+    position: relative;
+    word-break: normal;
+  }
+
+  /* Render the username above the caret */
+  .collaboration-cursor__label {
+    @apply rounded-t-sm text-xs font-semibold;
+    border-radius: 3px 3px 3px 0;
+    color: #0d0d0d;
+    left: -1px;
+    line-height: normal;
+    padding: 0.1rem 0.3rem;
+    position: absolute;
+    top: -1.4em;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  /* Thread mark */
+  .tiptap-thread,
+  .tiptap-thread * {
+    transition: all 0.2s cubic-bezier(0.65, 0.05, 0.36, 1);
+  }
+
+  .tiptap-thread[data-type='block'] {
+    &:first-child {
+      margin-top: 0;
+    }
+
+    > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
+      outline-width: 2px;
+      outline-color: transparent;
+      outline-style: dashed;
+    }
+  }
+}
+
+/* Thread mark highlighting based on data-viewmode */
+[data-viewmode='open'] .tiptap {
+  .tiptap-thread[data-status-all='open'] {
+    &[data-type='block'] {
+      > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
+        @apply bg-yellow-400/40 outline-yellow-400/40;
+      }
+
+      &:hover,
+      &[data-state='selected'],
+      &[data-state='hovered'] {
+        > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
+          @apply bg-yellow-400 outline-yellow-400;
+        }
+      }
+    }
+
+    &[data-type='inline'] {
+      @apply border-b-2 border-dashed border-yellow-400;
+
+      &:hover,
+      &[data-state='selected'],
+      &[data-state='hovered'] {
+        @apply bg-yellow-400/40;
+      }
+    }
+  }
+}
+
+[data-viewmode='resolved'] .tiptap {
+  .tiptap-thread[data-status='closed'] {
+    &[data-type='block'] {
+      > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
+        @apply bg-yellow-400/40 outline-yellow-400/40;
+      }
+
+      &:hover,
+      &[data-state='selected'],
+      &[data-state='hovered'] {
+        > :not(p, h1, h2, h3, h4, h5, h6, ul, li) {
+          @apply bg-yellow-400 outline-yellow-400;
+        }
+      }
+    }
+
+    &[data-type='inline'] {
+      @apply border-b-2 border-dashed border-yellow-400;
+
+      &:hover,
+      &[data-state='selected'],
+      &[data-state='hovered'] {
+        @apply bg-yellow-400/40;
+      }
+    }
+  }
+}

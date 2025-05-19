@@ -1,0 +1,49 @@
+import {useCallback, useEffect, useState} from 'react'
+
+import {TiptapCollabProvider} from '@hocuspocus/provider'
+import {TCollabThread} from '@tiptap-pro/extension-comments'
+import {Editor} from '@tiptap/react'
+
+import {Thread} from '../context'
+
+export const useThreads = (provider: TiptapCollabProvider, editor: Editor | null) => {
+  const [threads, setThreads] = useState<Thread[]>([])
+
+  useEffect(() => {
+    if (!provider) return
+
+    const handleThreadsUpdate = (rawThreads: TCollabThread[]) => {
+      const processedThreads: Thread[] = rawThreads.map(rawThread => ({
+        id: rawThread.id,
+        resolvedAt: rawThread.resolvedAt ? parseInt(rawThread.resolvedAt, 10) : null,
+        comments: rawThread.comments.map(rawComment => ({
+          id: rawComment.id,
+          content: rawComment.content,
+          createdAt: parseInt(rawComment.createdAt, 10),
+          updatedAt: parseInt(rawComment.updatedAt, 10),
+          deletedAt: rawComment.deletedAt ? parseInt(rawComment.deletedAt, 10) : undefined,
+          data: {
+            userName: rawComment.data?.userName || 'Unknown',
+          },
+        })),
+      }))
+      setThreads(processedThreads)
+    }
+
+    provider.on('threads', handleThreadsUpdate)
+
+    return () => {
+      provider.off('threads', handleThreadsUpdate)
+    }
+  }, [provider])
+
+  const createThread = useCallback(() => {
+    if (!editor || editor.state.selection.empty) {
+      return
+    }
+
+    editor.commands.createThread()
+  }, [editor])
+
+  return {threads, createThread}
+}
