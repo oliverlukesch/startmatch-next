@@ -1,13 +1,13 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {memo, useCallback, useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import CollaborationHistory, {
   CollabHistoryVersion,
   CollabOnUpdateProps,
 } from '@tiptap-pro/extension-collaboration-history'
-import {Editor} from '@tiptap/core'
+import {Editor, EditorEvents} from '@tiptap/core'
 import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
 import {EditorContent, useEditor} from '@tiptap/react'
@@ -60,12 +60,14 @@ interface EditorFieldProps {
   setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
-  // CollaborationHistory only works inside the editor context which is why we
-  // pipe through the update event
+  // required as CollaborationHistory only works inside the editor context
   onPrimaryHistoryUpdate: (data: CollabOnUpdateProps) => void
+  // required to trigger a re-render of the EditorToolbar when the selection
+  // changes (which is required for highlighting the correct buttons)
+  onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
 }
 
-const EditorField = ({
+const EditorField = memo(function EditorField({
   fieldName,
   provider,
   user,
@@ -75,7 +77,11 @@ const EditorField = ({
   isPrimary,
   setPrimaryEditor,
   onPrimaryHistoryUpdate,
-}: EditorFieldProps) => {
+  onSelectionUpdate,
+}: EditorFieldProps) {
+  // leave for debugging
+  // console.log('render EditorFieldProps', fieldName)
+
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
     return getOrCreateSubFragment(yDoc, fieldName)
@@ -113,6 +119,7 @@ const EditorField = ({
       onFocus: () => {
         setActiveField({fieldName, editor})
       },
+      onSelectionUpdate,
     },
     [fieldName, provider, user, subFragment],
   )
@@ -122,11 +129,16 @@ const EditorField = ({
   }, [editor, isPrimary, setPrimaryEditor])
 
   return <EditorContent editor={editor} className="editor-field" />
-}
+})
 
 // MAIN COMPONENT
 
+// TODO: take another stab at render performance, see here:
+// https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
 export default function CollabEditor({document, user, appId, className}: EditorProps) {
+  // leave for debugging
+  // console.log('render CollabEditor')
+
   const [isProviderSynced, setIsProviderSynced] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -139,6 +151,7 @@ export default function CollabEditor({document, user, appId, className}: EditorP
   const [activeField, setActiveField] = useState<{fieldName: string; editor: Editor | null} | null>(
     null,
   )
+  const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
 
   const [yDoc, provider] = useMemo(() => {
     const yDoc = new Y.Doc()
@@ -153,10 +166,10 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     return [yDoc, provider]
   }, [document, user, appId])
 
-  function onPrimaryHistoryUpdate(data: CollabOnUpdateProps) {
+  const onPrimaryHistoryUpdate = useCallback((data: CollabOnUpdateProps) => {
     setVersions(data.versions)
     setCurrentVersion(data.currentVersion)
-  }
+  }, [])
 
   useEffect(() => {
     const onUpdate = () => {
@@ -182,7 +195,9 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     <div className={cn('flex overflow-hidden rounded-xl border', className)}>
       {/* EDITOR FIELDS */}
       <div className="flex flex-1 flex-col">
-        <EditorToolbar editor={activeField?.editor || null} />
+        {/* passing the editor through the selection ensures that the correct buttons are highlighted */}
+        <EditorToolbar editor={selection?.editor || null} />
+
         <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
           {document.fields.map((fieldName, index) => (
             <div className="flex flex-col gap-2" key={fieldName}>
@@ -197,6 +212,7 @@ export default function CollabEditor({document, user, appId, className}: EditorP
                 isPrimary={index === 0}
                 setPrimaryEditor={setPrimaryEditor}
                 onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
+                onSelectionUpdate={onSelectionUpdate}
               />
             </div>
           ))}
@@ -217,18 +233,8 @@ export default function CollabEditor({document, user, appId, className}: EditorP
       </div>
 
       {/* SIDEBAR */}
+      {/* TODO: decouple into stand-alone + memoed component */}
       <div className="flex w-80 shrink-0 flex-col gap-4 overflow-scroll border-l bg-slate-50 p-4">
-        <Button
-          onClick={() => {
-            console.log(
-              provider.configuration.document.share.forEach((item, key) => {
-                console.log(key, item.toJSON())
-              }),
-            )
-          }}>
-          Log document
-        </Button>
-
         <Button
           disabled={!hasChanges}
           onClick={() => {
