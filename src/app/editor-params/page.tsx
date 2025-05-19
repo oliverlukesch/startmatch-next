@@ -8,7 +8,7 @@ export default function App() {
   const userToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_APP_SECRET || '')
 
   const document = {
-    name: 'dev.document',
+    name: 'dev.document5',
     fields: Array.from({length: 20}, (_, i) => `section-${i + 1}`),
   }
 

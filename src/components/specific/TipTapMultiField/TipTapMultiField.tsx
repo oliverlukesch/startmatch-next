@@ -1,9 +1,12 @@
 'use client'
 
-import {useEffect, useMemo, useRef, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
-import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
+import CollaborationHistory, {
+  CollabHistoryVersion,
+  CollabOnUpdateProps,
+} from '@tiptap-pro/extension-collaboration-history'
 import {Editor} from '@tiptap/core'
 import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
@@ -65,7 +68,9 @@ interface EditorFieldProps {
   doc: Y.Doc
   isProviderSynced: boolean
   setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
-  editorMap: Map<string, Editor>
+  isPrimary: boolean
+  setPrimaryEditor: (editor: Editor | null) => void
+  onPrimaryHistoryUpdate: (data: CollabOnUpdateProps) => void
 }
 
 const EditorField = ({
@@ -75,7 +80,9 @@ const EditorField = ({
   doc,
   isProviderSynced,
   setActiveField,
-  editorMap,
+  isPrimary,
+  setPrimaryEditor,
+  onPrimaryHistoryUpdate,
 }: EditorFieldProps) => {
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
@@ -100,6 +107,9 @@ const EditorField = ({
               }),
               CollaborationHistory.configure({
                 provider,
+                onUpdate: data => {
+                  if (isPrimary) onPrimaryHistoryUpdate(data)
+                },
               }),
             ]
           : []),
@@ -116,14 +126,8 @@ const EditorField = ({
   )
 
   useEffect(() => {
-    if (editor) editorMap.set(fieldName, editor)
-    else editorMap.delete(fieldName)
-
-    return () => {
-      if (editor) editor.destroy()
-      editorMap.delete(fieldName)
-    }
-  }, [fieldName, editorMap, editor])
+    if (isPrimary) setPrimaryEditor(editor)
+  }, [editor, isPrimary, setPrimaryEditor])
 
   return <EditorContent editor={editor} className="editor-field" />
 }
@@ -134,7 +138,10 @@ export default function CollabEditor({document, user, appId, className}: EditorP
   const [isProviderSynced, setIsProviderSynced] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
-  const editorMap = useRef<Map<string, Editor>>(new Map())
+  const [versions, setVersions] = useState<CollabHistoryVersion[]>([])
+  const [currentVersion, setCurrentVersion] = useState<number | undefined>()
+
+  const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
   const [activeField, setActiveField] = useState<{fieldName: string; editor: Editor | null} | null>(
     null,
   )
@@ -148,17 +155,32 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     })
   }, [document, user, appId])
 
+  function onPrimaryHistoryUpdate(data: CollabOnUpdateProps) {
+    console.log('History update:', data)
+    setVersions(data.versions)
+    setCurrentVersion(data.currentVersion)
+  }
+
   useEffect(() => {
     const onUpdate = () => {
+      console.log('Document updated')
       setHasChanges(true)
     }
 
     const onSynced = () => {
+      console.log('Provider synced')
       setIsProviderSynced(true)
       doc.on('update', onUpdate)
     }
 
     provider.on('synced', onSynced)
+
+    CollaborationHistory.configure({
+      provider,
+      onUpdate: data => {
+        console.log('History update:', data)
+      },
+    })
 
     return () => {
       provider.off('synced', onSynced)
@@ -170,32 +192,57 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     <div className={cn('flex flex-1 flex-col gap-3', className)}>
       {activeField && <h2 className="text-xl font-semibold">Active: {activeField?.fieldName}</h2>}
 
-      <div className="flex gap-3">
-        <Button
-          onClick={() => {
-            console.log(provider.configuration.document.share)
-            console.log(provider.configuration.document.toJSON())
-          }}>
-          Log document
-        </Button>
+      <div className="flex justify-between gap-6 rounded-xl border p-2">
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={() => {
+              console.log(
+                provider.configuration.document.share.forEach((item, key) => {
+                  console.log(key, item.toJSON())
+                }),
+              )
+            }}>
+            Log document
+          </Button>
 
-        <Button
-          disabled={!hasChanges}
-          onClick={() => {
-            const firstEditor = editorMap.current.values().next().value
-            if (!firstEditor) return
+          <Button
+            disabled={!hasChanges}
+            onClick={() => {
+              if (!primaryEditor) return
+              primaryEditor.commands.saveVersion(`version-${Date.now()}`)
+              setHasChanges(false)
+            }}>
+            Save version
+          </Button>
+        </div>
 
-            firstEditor.commands.saveVersion(`version-${Date.now()}`)
-            setHasChanges(false)
+        <ul className="list-disc pl-5">
+          {versions.map(version => (
+            <li key={version.version} className="flex items-center justify-between gap-2">
+              <span>
+                {version.version}: {version.name}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!primaryEditor) return
+                  primaryEditor.commands.revertToVersion(version.version)
+                }}>
+                Revert
+              </Button>
+            </li>
+          ))}
+        </ul>
 
-            console.log(provider.configuration.document.share)
-            console.log(provider.configuration.document.toJSON())
-          }}>
-          Save version
-        </Button>
+        {currentVersion && (
+          <div>
+            Current version: {currentVersion} - {new Date(currentVersion).toLocaleString()}
+          </div>
+        )}
       </div>
 
-      {document.fields.map(fieldName => (
+      {document.fields.map((fieldName, index) => (
         <div key={fieldName}>
           <h3 className="text-lg font-semibold">{fieldName}</h3>
           <EditorField
@@ -205,7 +252,9 @@ export default function CollabEditor({document, user, appId, className}: EditorP
             doc={doc}
             isProviderSynced={isProviderSynced}
             setActiveField={setActiveField}
-            editorMap={editorMap.current}
+            isPrimary={index === 0}
+            setPrimaryEditor={setPrimaryEditor}
+            onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
           />
         </div>
       ))}
