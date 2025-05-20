@@ -10,7 +10,7 @@ import {ThreadsList} from './components/ThreadsList'
 import {ThreadsProvider, User} from './context'
 import {useThreads} from './hooks/useThreads'
 
-interface CommentsProps {
+interface ThreadsSidebarProps {
   editor: Editor | null
   provider: TiptapCollabProvider
   user: User
@@ -21,7 +21,7 @@ export interface ThreadsSidebarRef {
   createThread: () => void
 }
 
-export const ThreadsSidebar = forwardRef(({editor, provider, user}: CommentsProps, ref) => {
+export const ThreadsSidebar = forwardRef(({editor, provider, user}: ThreadsSidebarProps, ref) => {
   const [selectedThread, setSelectedThread] = useState<string | null>(null)
   const [showUnresolved, setShowUnresolved] = useState(true)
 
@@ -102,10 +102,6 @@ export const ThreadsSidebar = forwardRef(({editor, provider, user}: CommentsProp
     hoverOffThread(editor)
   }, [editor])
 
-  if (!editor) {
-    return null
-  }
-
   const filteredThreads = threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
 
   return (
@@ -117,7 +113,7 @@ export const ThreadsSidebar = forwardRef(({editor, provider, user}: CommentsProp
       onResolveThread={resolveThread}
       onUpdateComment={updateComment}
       onUnresolveThread={unresolveThread}
-      selectedThreads={editor.storage.comments?.focusedThreads || []}
+      selectedThreads={editor?.storage.comments?.focusedThreads || []}
       selectedThread={selectedThread}
       setSelectedThread={setSelectedThread}
       threads={threads}

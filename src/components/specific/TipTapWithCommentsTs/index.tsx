@@ -73,7 +73,6 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
 
   const editor = useEditor(
     {
-      onSelectionUpdate: ({editor: currentEditor}) => setSelection(currentEditor.state.selection),
       extensions: [
         StarterKit.configure({
           history: false,
@@ -104,6 +103,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
           placeholder: 'Write a text to add comments …',
         }),
       ],
+      onSelectionUpdate: ({editor: currentEditor}) => setSelection(currentEditor.state.selection),
     },
     [provider, user, subFragment, yDoc],
   )
