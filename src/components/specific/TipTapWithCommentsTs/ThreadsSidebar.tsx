@@ -1,33 +1,49 @@
 'use client'
 
-import {useCallback, useState} from 'react'
+import {forwardRef, useCallback, useImperativeHandle, useState} from 'react'
 
-import {TCollabThread, TiptapCollabProvider} from '@hocuspocus/provider'
+import {TiptapCollabProvider} from '@hocuspocus/provider'
 import {hoverOffThread, hoverThread} from '@tiptap-pro/extension-comments'
 import {Editor} from '@tiptap/react'
 
 import {ThreadsList} from './components/ThreadsList'
 import {ThreadsProvider, User} from './context'
-import './style.css'
+import {useThreads} from './hooks/useThreads'
 
 interface CommentsProps {
   editor: Editor | null
   provider: TiptapCollabProvider
   user: User
-  threads: TCollabThread[]
-  setSelectedThread: React.Dispatch<React.SetStateAction<string | null>>
-  selectedThread: string | null
 }
 
-export default function ThreadsSidebar({
-  editor,
-  provider,
-  user,
-  threads,
-  setSelectedThread,
-  selectedThread,
-}: CommentsProps) {
+export interface ThreadsSidebarRef {
+  onClickThread: (threadId: string | null) => void
+  createThread: () => void
+}
+
+export const ThreadsSidebar = forwardRef(({editor, provider, user}: CommentsProps, ref) => {
+  const [selectedThread, setSelectedThread] = useState<string | null>(null)
   const [showUnresolved, setShowUnresolved] = useState(true)
+
+  const {threads = [], createThread} = useThreads(provider, editor, user)
+
+  function onClickThread(threadId: string | null) {
+    const isResolved = threads.find(t => t.id === threadId)?.resolvedAt
+
+    if (!threadId || isResolved) {
+      setSelectedThread(null)
+      editor?.chain().unselectThread?.().run()
+      return
+    }
+
+    setSelectedThread(threadId)
+    editor?.chain().selectThread?.({id: threadId, updateSelection: false}).run()
+  }
+
+  useImperativeHandle(ref, () => ({
+    onClickThread,
+    createThread,
+  }))
 
   const selectThreadInEditor = useCallback(
     (threadId: string) => {
@@ -136,4 +152,6 @@ export default function ThreadsSidebar({
       </div>
     </ThreadsProvider>
   )
-}
+})
+
+ThreadsSidebar.displayName = 'ThreadsSidebar'

@@ -2,7 +2,7 @@
 
 import {useEffect, useMemo, useRef, useState} from 'react'
 
-import {TCollabThread, TiptapCollabProvider} from '@hocuspocus/provider'
+import {TiptapCollabProvider} from '@hocuspocus/provider'
 import {CommentsKit} from '@tiptap-pro/extension-comments'
 import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
@@ -12,9 +12,8 @@ import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
-import ThreadsSidebar from './ThreadsSidebar'
+import {ThreadsSidebar, ThreadsSidebarRef} from './ThreadsSidebar'
 import {User} from './context'
-import {useThreads} from './hooks/useThreads'
 import './style.css'
 
 function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {
@@ -36,10 +35,10 @@ interface EditorProps {
 }
 
 export default function CollabEditor({appId, documentName, user}: EditorProps) {
-  const [selectedThread, setSelectedThread] = useState<string | null>(null)
-  const threadsRef = useRef<TCollabThread[]>([])
   const [synced, setSynced] = useState(false)
+
   const [selection, setSelection] = useState<{empty: boolean} | null>(null)
+  const threadsSidebarRef = useRef<ThreadsSidebarRef>(null)
 
   const [yDoc, provider] = useMemo(() => {
     const yDoc = new Y.Doc()
@@ -96,16 +95,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
               CommentsKit.configure({
                 provider,
                 onClickThread: (threadId: string | null) => {
-                  const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt
-
-                  if (!threadId || isResolved) {
-                    setSelectedThread(null)
-                    editor?.chain().unselectThread?.().run()
-                    return
-                  }
-
-                  setSelectedThread(threadId)
-                  editor?.chain().selectThread?.({id: threadId, updateSelection: false}).run()
+                  threadsSidebarRef.current?.onClickThread(threadId)
                 },
               }),
             ]
@@ -118,10 +108,6 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
     [provider, user, subFragment, yDoc],
   )
 
-  const {threads = [], createThread} = useThreads(provider, editor, user)
-
-  threadsRef.current = threads
-
   if (!editor) return null
 
   return (
@@ -130,7 +116,9 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
         <div className="main">
           <div className="control-group">
             <div className="button-group">
-              <button onClick={createThread} disabled={!selection || selection.empty}>
+              <button
+                onClick={threadsSidebarRef.current?.createThread}
+                disabled={!selection || selection.empty}>
                 Add comment
               </button>
               <button
@@ -144,14 +132,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
           <EditorContent editor={editor} />
         </div>
 
-        <ThreadsSidebar
-          editor={editor}
-          provider={provider}
-          user={user}
-          threads={threads}
-          setSelectedThread={setSelectedThread}
-          selectedThread={selectedThread}
-        />
+        <ThreadsSidebar editor={editor} provider={provider} user={user} ref={threadsSidebarRef} />
       </div>
     </div>
   )
