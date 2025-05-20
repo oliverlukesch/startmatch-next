@@ -12,9 +12,9 @@ import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
-import {ThreadsList} from './components/ThreadsList'
-import {ThreadsProvider, User} from './context'
-import {useThreads} from './hooks/useThreads'
+import {ThreadsList} from './ThreadsSidebar/components/ThreadsList'
+import {ThreadsProvider, User} from './ThreadsSidebar/context'
+import {useThreads} from './ThreadsSidebar/hooks/useThreads'
 import './style.css'
 
 function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {

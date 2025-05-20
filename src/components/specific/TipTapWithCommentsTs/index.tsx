@@ -14,7 +14,7 @@ import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
 import {ThreadsSidebar, ThreadsSidebarRef} from './ThreadsSidebar'
-import {User} from './context'
+import {User} from './ThreadsSidebar/context'
 import './style.css'
 
 function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {
