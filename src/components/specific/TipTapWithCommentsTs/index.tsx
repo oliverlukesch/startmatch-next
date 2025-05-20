@@ -182,6 +182,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
                 }>
                 Add image
               </button>
+              <button onClick={() => console.log(yDoc.toJSON())}>Log document</button>
             </div>
           </div>
           Editor 1

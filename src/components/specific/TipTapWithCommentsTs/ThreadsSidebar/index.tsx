@@ -23,6 +23,10 @@ export interface ThreadsSidebarRef {
   createThread: () => void
 }
 
+// TODO: implement a simple system that is able to associate a comment with a
+// document section and scroll to the specific editor that contains the section
+// when clicked in the sidebar. storing arbitrary data inside a yDoc is easy,
+// see here: https://tiptap.dev/docs/hocuspocus/getting-started#frontend
 export const ThreadsSidebar = memo(
   forwardRef(
     ({editor, provider, user, showUnresolved, setShowUnresolved}: ThreadsSidebarProps, ref) => {
