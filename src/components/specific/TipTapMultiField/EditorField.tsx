@@ -54,7 +54,7 @@ export const EditorField = memo(function EditorField({
   onSelectionUpdate,
 }: EditorFieldProps) {
   // leave for debugging
-  console.log('render EditorFieldProps', fieldName)
+  // console.log('render EditorFieldProps', fieldName)
 
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
