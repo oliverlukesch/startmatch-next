@@ -41,6 +41,8 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
   const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
   const threadsSidebarRef = useRef<ThreadsSidebarRef>(null)
 
+  const [showUnresolved, setShowUnresolved] = useState(true)
+
   const [yDoc, provider] = useMemo(() => {
     const yDoc = new Y.Doc()
 
@@ -57,6 +59,11 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
   const subFragment = useMemo(() => {
     if (!synced) return null
     return getOrCreateSubFragment(yDoc, 'section-1')
+  }, [yDoc, synced])
+
+  const subFragment2 = useMemo(() => {
+    if (!synced) return null
+    return getOrCreateSubFragment(yDoc, 'section-2')
   }, [yDoc, synced])
 
   useEffect(() => {
@@ -98,6 +105,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
                   threadsSidebarRef.current?.onClickThread(threadId)
                 },
                 useLegacyWrapping: false,
+                deleteUnreferencedThreads: false,
               }),
             ]
           : []),
@@ -106,8 +114,55 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
         }),
       ],
       onSelectionUpdate,
+      onBlur: () => {
+        console.log('editor 1 blurred')
+        editor?.chain().unselectThread?.().run()
+      },
     },
     [provider, user, subFragment, yDoc],
+  )
+
+  const editor2 = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          history: false,
+        }),
+        Image,
+        ...(subFragment2
+          ? [
+              Collaboration.configure({
+                document: yDoc,
+                fragment: subFragment2,
+              }),
+              CollaborationCursor.configure({
+                provider,
+                user: {
+                  name: user.name,
+                  color: user.color,
+                },
+              }),
+              CommentsKit.configure({
+                provider,
+                onClickThread: (threadId: string | null) => {
+                  threadsSidebarRef.current?.onClickThread(threadId)
+                },
+                useLegacyWrapping: false,
+                deleteUnreferencedThreads: false,
+              }),
+            ]
+          : []),
+        Placeholder.configure({
+          placeholder: 'Write a text to add comments …',
+        }),
+      ],
+      onSelectionUpdate,
+      onBlur: () => {
+        console.log('editor 2 blurred')
+        editor?.chain().unselectThread?.().run()
+      },
+    },
+    [provider, user, subFragment2, yDoc],
   )
 
   if (!editor) return null
@@ -115,7 +170,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
   return (
     <div className="tiptap-comments-test-editor">
       <div className="col-group">
-        <div className="main">
+        <div className="main" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
           <div className="control-group">
             <div className="button-group">
               <button onClick={threadsSidebarRef.current?.createThread} disabled={!selection}>
@@ -129,10 +184,20 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
               </button>
             </div>
           </div>
+          Editor 1
           <EditorContent editor={editor} />
+          Editor 2
+          <EditorContent editor={editor2} />
         </div>
 
-        <ThreadsSidebar editor={editor} provider={provider} user={user} ref={threadsSidebarRef} />
+        <ThreadsSidebar
+          editor={selection?.editor || editor}
+          provider={provider}
+          user={user}
+          ref={threadsSidebarRef}
+          showUnresolved={showUnresolved}
+          setShowUnresolved={setShowUnresolved}
+        />
       </div>
     </div>
   )
