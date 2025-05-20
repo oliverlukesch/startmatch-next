@@ -1,9 +1,9 @@
 import {useCallback, useMemo} from 'react'
 
-import {useThreadsState} from '../context.jsx'
-import {CommentCard} from './CommentCard.jsx'
-import {ThreadCard} from './ThreadCard.jsx'
-import {ThreadComposer} from './ThreadComposer.jsx'
+import {useThreadsState} from '../context'
+import {CommentCard} from './CommentCard'
+import {ThreadCard} from './ThreadCard'
+import {ThreadComposer} from './ThreadComposer'
 
 export const ThreadsListItem = ({thread, provider, active, open}) => {
   const {

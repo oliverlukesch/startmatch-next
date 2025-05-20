@@ -12,50 +12,51 @@ import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
-import {ThreadsList} from './components/ThreadsList'
-import {ThreadsProvider} from './context'
-import {useThreads} from './hooks/useThreads'
+import {ThreadsList} from './components/ThreadsList.jsx'
+import {ThreadsProvider} from './context.jsx'
+import {useThreads} from './hooks/useThreads.jsx'
 import './style.css'
 
-function getOrCreateSubField(doc, subFieldName) {
-  let defaultField = doc.get('default')
-  if (!defaultField || !(defaultField instanceof Y.Map)) {
-    defaultField = doc.getMap('default')
+function getOrCreateSubFragment(doc, name) {
+  const defaultMap = doc.getMap('default')
+  let subFragment = defaultMap.get(name)
+
+  if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
+    subFragment = new Y.XmlFragment()
+    defaultMap.set(name, subFragment)
   }
-  const defaultMap = defaultField
-  let subField = defaultMap.get(subFieldName)
-  if (!subField || !(subField instanceof Y.XmlFragment)) {
-    subField = new Y.XmlFragment()
-    defaultMap.set(subFieldName, subField)
-  }
-  return subField
+
+  return subFragment
 }
 
 export default ({appId, documentName, user}) => {
   const [showUnresolved, setShowUnresolved] = useState(true)
   const [selectedThread, setSelectedThread] = useState(null)
-  const [synced, setSynced] = useState(false)
   const threadsRef = useRef([])
+  const [synced, setSynced] = useState(false)
+  const [selection, setSelection] = useState(null)
 
   const [yDoc, provider] = useMemo(() => {
-    const yDocInstance = new Y.Doc()
+    const yDoc = new Y.Doc()
+
     const providerInstance = new TiptapCollabProvider({
       appId: appId,
       name: documentName,
-      document: yDocInstance,
-      ...(user.token && {token: user.token}),
+      document: yDoc,
+      token: user.token,
     })
-    return [yDocInstance, providerInstance]
+
+    return [yDoc, providerInstance]
   }, [appId, documentName, user.token])
 
-  const childFragment = useMemo(() => {
+  const subFragment = useMemo(() => {
     if (!synced) return null
-    return getOrCreateSubField(yDoc, 'comments-fragment')
-  }, [synced, yDoc])
+    return getOrCreateSubFragment(yDoc, 'section-1')
+  }, [yDoc, synced])
 
   useEffect(() => {
     const onSynced = () => {
-      console.log('Synced (Comments Editor)')
+      console.log('Provider synced')
       setSynced(true)
     }
 
@@ -68,17 +69,17 @@ export default ({appId, documentName, user}) => {
 
   const editor = useEditor(
     {
-      immediatelyRender: false,
+      onSelectionUpdate: ({editor: currentEditor}) => setSelection(currentEditor.state.selection),
       extensions: [
         StarterKit.configure({
           history: false,
         }),
         Image,
-        ...(childFragment
+        ...(subFragment
           ? [
               Collaboration.configure({
                 document: yDoc,
-                fragment: childFragment,
+                fragment: subFragment,
               }),
               CollaborationCursor.configure({
                 provider,
@@ -89,7 +90,6 @@ export default ({appId, documentName, user}) => {
               }),
               CommentsKit.configure({
                 provider,
-                useLegacyWrapping: false,
                 onClickThread: threadId => {
                   const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt
 
@@ -110,7 +110,7 @@ export default ({appId, documentName, user}) => {
         }),
       ],
     },
-    [provider, user, childFragment, yDoc],
+    [provider, user, subFragment, yDoc],
   )
 
   const {threads = [], createThread} = useThreads(provider, editor, user)
@@ -119,7 +119,10 @@ export default ({appId, documentName, user}) => {
 
   const selectThreadInEditor = useCallback(
     threadId => {
-      editor.chain().selectThread({id: threadId}).run()
+      // RAF required to avoid a React rendering issue
+      requestAnimationFrame(() => {
+        editor.chain().selectThread?.({id: threadId}).run()
+      })
     },
     [editor],
   )
@@ -176,65 +179,67 @@ export default ({appId, documentName, user}) => {
   const filteredThreads = threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
 
   return (
-    <ThreadsProvider
-      onClickThread={selectThreadInEditor}
-      onDeleteThread={deleteThread}
-      onHoverThread={onHoverThread}
-      onLeaveThread={onLeaveThread}
-      onResolveThread={resolveThread}
-      onUpdateComment={updateComment}
-      onUnresolveThread={unresolveThread}
-      selectedThreads={editor?.storage?.comments?.focusedThreads || []}
-      selectedThread={selectedThread}
-      setSelectedThread={setSelectedThread}
-      threads={threads}
-      user={user}>
-      <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
-        <div className="main">
-          <div className="control-group">
-            <div className="button-group">
-              <button onClick={createThread} disabled={editor.state.selection.empty}>
-                Add comment
-              </button>
-              <button
-                onClick={() =>
-                  editor.chain().focus().setImage({src: 'https://placehold.co/800x500'}).run()
-                }>
-                Add image
-              </button>
-            </div>
-          </div>
-          <EditorContent editor={editor} />
-        </div>
-        <div className="sidebar">
-          <div className="sidebar-options">
-            <div className="option-group">
-              <div className="label-large">Comments</div>
-              <div className="switch-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="thread-state"
-                    onChange={() => setShowUnresolved(true)}
-                    checked={showUnresolved}
-                  />
-                  Open
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="thread-state"
-                    onChange={() => setShowUnresolved(false)}
-                    checked={!showUnresolved}
-                  />
-                  Resolved
-                </label>
+    <div className="tiptap-comments-test-editor">
+      <ThreadsProvider
+        onClickThread={selectThreadInEditor}
+        onDeleteThread={deleteThread}
+        onHoverThread={onHoverThread}
+        onLeaveThread={onLeaveThread}
+        onResolveThread={resolveThread}
+        onUpdateComment={updateComment}
+        onUnresolveThread={unresolveThread}
+        selectedThreads={editor.storage.comments?.focusedThreads || []}
+        selectedThread={selectedThread}
+        setSelectedThread={setSelectedThread}
+        threads={threads}
+        user={user}>
+        <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
+          <div className="main">
+            <div className="control-group">
+              <div className="button-group">
+                <button onClick={createThread} disabled={!selection || selection.empty}>
+                  Add comment
+                </button>
+                <button
+                  onClick={() =>
+                    editor.chain().focus().setImage({src: 'https://placehold.co/800x500'}).run()
+                  }>
+                  Add image
+                </button>
               </div>
             </div>
-            <ThreadsList provider={provider} threads={filteredThreads} />
+            <EditorContent editor={editor} />
+          </div>
+          <div className="sidebar">
+            <div className="sidebar-options">
+              <div className="option-group">
+                <div className="label-large">Comments</div>
+                <div className="switch-group">
+                  <label>
+                    <input
+                      type="radio"
+                      name="thread-state"
+                      onChange={() => setShowUnresolved(true)}
+                      checked={showUnresolved}
+                    />
+                    Open
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="thread-state"
+                      onChange={() => setShowUnresolved(false)}
+                      checked={!showUnresolved}
+                    />
+                    Resolved
+                  </label>
+                </div>
+              </div>
+              <ThreadsList provider={provider} threads={filteredThreads} />
+            </div>
           </div>
         </div>
-      </div>
-    </ThreadsProvider>
+      </ThreadsProvider>
+    </div>
   )
 }

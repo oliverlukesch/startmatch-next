@@ -29,13 +29,13 @@ export interface EditorFieldProps {
   onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
 }
 
-function getOrCreateSubFragment(doc: Y.Doc, subFieldName: string): Y.XmlFragment {
+function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {
   const defaultMap = doc.getMap('default')
-  let subFragment = defaultMap.get(subFieldName) as Y.XmlFragment
+  let subFragment = defaultMap.get(name) as Y.XmlFragment
 
   if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
     subFragment = new Y.XmlFragment()
-    defaultMap.set(subFieldName, subFragment)
+    defaultMap.set(name, subFragment)
   }
 
   return subFragment

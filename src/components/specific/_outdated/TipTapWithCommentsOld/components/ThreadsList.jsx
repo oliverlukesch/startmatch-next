@@ -1,5 +1,5 @@
-import {useThreadsState} from '../context.jsx'
-import {ThreadsListItem} from './ThreadsListItem.jsx'
+import {useThreadsState} from '../context'
+import {ThreadsListItem} from './ThreadsListItem'
 
 export const ThreadsList = ({provider, threads}) => {
   const {selectedThreads, selectedThread} = useThreadsState()

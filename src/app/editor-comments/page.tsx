@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import CollabEditor from '@/components/specific/TipTapWithCommentsNext'
+import CollabEditor from '@/components/specific/TipTapWithComments'
 
 export default function App() {
   const userName = `comment_user_${Math.round(Math.random() * 1000)}`
