@@ -4,6 +4,7 @@ import {useEffect, useMemo, useRef, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import {CommentsKit} from '@tiptap-pro/extension-comments'
+import {EditorEvents} from '@tiptap/core'
 import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
 import Image from '@tiptap/extension-image'
@@ -37,7 +38,7 @@ interface EditorProps {
 export default function CollabEditor({appId, documentName, user}: EditorProps) {
   const [synced, setSynced] = useState(false)
 
-  const [selection, setSelection] = useState<{empty: boolean} | null>(null)
+  const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
   const threadsSidebarRef = useRef<ThreadsSidebarRef>(null)
 
   const [yDoc, provider] = useMemo(() => {
@@ -96,6 +97,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
                 onClickThread: (threadId: string | null) => {
                   threadsSidebarRef.current?.onClickThread(threadId)
                 },
+                useLegacyWrapping: false,
               }),
             ]
           : []),
@@ -103,7 +105,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
           placeholder: 'Write a text to add comments …',
         }),
       ],
-      onSelectionUpdate: ({editor: currentEditor}) => setSelection(currentEditor.state.selection),
+      onSelectionUpdate,
     },
     [provider, user, subFragment, yDoc],
   )
@@ -116,9 +118,7 @@ export default function CollabEditor({appId, documentName, user}: EditorProps) {
         <div className="main">
           <div className="control-group">
             <div className="button-group">
-              <button
-                onClick={threadsSidebarRef.current?.createThread}
-                disabled={!selection || selection.empty}>
+              <button onClick={threadsSidebarRef.current?.createThread} disabled={!selection}>
                 Add comment
               </button>
               <button

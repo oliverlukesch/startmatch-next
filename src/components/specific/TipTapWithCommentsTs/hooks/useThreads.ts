@@ -3,7 +3,7 @@
 import {useCallback, useEffect, useState} from 'react'
 
 import {TCollabThread, TiptapCollabProvider} from '@hocuspocus/provider'
-import {subscribeToThreads} from '@tiptap-pro/extension-comments'
+// import {subscribeToThreads} from '@tiptap-pro/extension-comments'
 import {Editor} from '@tiptap/core'
 
 interface UseThreadsReturn {
@@ -18,18 +18,37 @@ export const useThreads = (
 ): UseThreadsReturn => {
   const [threads, setThreads] = useState<TCollabThread[]>()
 
-  useEffect(() => {
-    if (provider) {
-      const unsubscribe = subscribeToThreads({
-        provider,
-        callback: (currentThreads: TCollabThread[]) => {
-          setThreads(currentThreads)
-        },
-      })
+  // useEffect(() => {
+  //   if (provider) {
+  //     const unsubscribe = subscribeToThreads({
+  //       provider,
+  //       callback: (currentThreads: TCollabThread[]) => {
+  //         console.log('currentThreads', currentThreads)
+  //         setThreads(currentThreads)
+  //       },
+  //     })
 
-      return () => {
-        unsubscribe()
-      }
+  //     return () => {
+  //       unsubscribe()
+  //     }
+  //   }
+  // }, [provider])
+
+  useEffect(() => {
+    if (!provider) {
+      return () => null
+    }
+
+    const getThreads = () => {
+      setThreads(provider.getThreads())
+    }
+
+    getThreads()
+
+    provider.watchThreads(getThreads)
+
+    return () => {
+      provider.unwatchThreads(getThreads)
     }
   }, [provider])
 

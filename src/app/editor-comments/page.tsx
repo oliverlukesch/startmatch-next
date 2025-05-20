@@ -11,7 +11,7 @@ export default function App() {
     <div className="flex flex-col gap-4 p-4">
       <CollabEditor
         appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
-        documentName="dev.comments.document2"
+        documentName="dev.comments.document4"
         user={{
           name: userName,
           color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
