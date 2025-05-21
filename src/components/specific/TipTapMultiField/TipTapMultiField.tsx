@@ -34,11 +34,34 @@ export interface EditorProps {
   className?: string
 }
 
+interface DocSettings {
+  isAiEditing: boolean
+}
+
+const docSettingsKeys = {
+  mapName: '__sm__settings',
+  isAiEditing: 'isAiEditing',
+}
+
+// YJS library is wrongly typed, this is a workaround
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeYjsMapGet<T>(map: Y.Map<any>, key: string): T {
+  return map.get(key) as T
+}
+
+// YJS library is wrongly typed, this is a workaround
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeYjsMapSet(map: Y.Map<any>, key: string, value: any) {
+  map.set(key, value)
+}
+
 // TODO: take another stab at render performance, see here:
 // https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
 export default function CollabEditor({document, user, docAppId, aiAppId, className}: EditorProps) {
   // leave for debugging
   // console.log('render CollabEditor')
+
+  const [isAiEditing, setIsAiEditing] = useState(false)
 
   const [isProviderSynced, setIsProviderSynced] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
@@ -92,12 +115,39 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
     }
   }, [yDoc, provider])
 
+  const docSettings = useMemo(() => {
+    if (!isProviderSynced) return
+
+    const docSettings = yDoc.getMap<DocSettings>(docSettingsKeys.mapName)
+
+    const isAiEditing = safeYjsMapGet<boolean>(docSettings, docSettingsKeys.isAiEditing)
+    setIsAiEditing(isAiEditing)
+
+    docSettings.observe(() => {
+      const isAiEditing = safeYjsMapGet<boolean>(docSettings, docSettingsKeys.isAiEditing)
+      setIsAiEditing(isAiEditing)
+    })
+
+    return docSettings
+  }, [yDoc, isProviderSynced])
+
   return (
     <div className={cn('flex overflow-hidden rounded-xl border', className)}>
       {/* EDITOR FIELDS */}
       <div className="flex flex-1 flex-col">
         {/* passing the editor through the selection ensures that the correct buttons are highlighted */}
         <EditorToolbar editor={selection?.editor || null} />
+
+        <div className={cn('flex gap-4 border-b p-4', isAiEditing && 'bg-red-50')}>
+          <Button onClick={() => console.log(yDoc.toJSON())}>Log doc</Button>
+          <Button
+            className={cn(isAiEditing && 'bg-destructive')}
+            onClick={() =>
+              docSettings && safeYjsMapSet(docSettings, docSettingsKeys.isAiEditing, !isAiEditing)
+            }>
+            Is AI editing: {JSON.stringify(isAiEditing)}
+          </Button>
+        </div>
 
         <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
           {isProviderSynced &&
