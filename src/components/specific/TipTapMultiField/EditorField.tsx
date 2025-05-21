@@ -137,7 +137,12 @@ export const EditorField = memo(function EditorField({
 
           <Button
             onClick={() =>
-              editor.chain().focus().aiShorten({stream: false, format: 'rich-text'}).run()
+              editor
+                .chain()
+                .focus()
+                // startsInline helps with fixing TipTap collaboration-related issues
+                .aiShorten({stream: true, format: 'rich-text', startsInline: true})
+                .run()
             }>
             Shorten
           </Button>
@@ -147,7 +152,8 @@ export const EditorField = memo(function EditorField({
               editor
                 .chain()
                 .focus()
-                .aiComplete({append: true, stream: false, format: 'rich-text'})
+                // startsInline helps with fixing TipTap collaboration-related issues
+                .aiComplete({append: true, stream: true, format: 'rich-text', startsInline: true})
                 .run()
             }>
             Continue

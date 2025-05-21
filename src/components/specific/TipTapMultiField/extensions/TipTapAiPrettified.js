@@ -57,7 +57,6 @@ function getHtmlContentBetween(editor, from, to) {
     editor.schema,
   )
 
-  // If selection doesn't span multiple blocks, remove the outer tag
   if (isSelectionSpanningMultipleBlocks(editor.state.selection)) {
     return html
   }
@@ -74,7 +73,6 @@ const isValidJsonString = str => {
 }
 
 const resolveAiStreamRequest = async ({action, text, textOptions, extensionOptions, aborter}) => {
-  var _a, _b
   const {appId, token, baseUrl: configBaseUrl} = extensionOptions
   const baseUrl =
     configBaseUrl !== null && configBaseUrl !== void 0 ? configBaseUrl : AI_DEFAULT_BASE_URL
@@ -105,14 +103,14 @@ const resolveAiStreamRequest = async ({action, text, textOptions, extensionOptio
 
   if (!response.ok) {
     const errorData = await response.json()
-    if ((errorData === null || errorData === void 0 ? void 0 : errorData.error) instanceof Object) {
-      throw new Error(
-        `${(_a = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _a === void 0 ? void 0 : _a.status} ${(_b = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _b === void 0 ? void 0 : _b.message}`,
-      )
+    const errorDetail = errorData === null || errorData === void 0 ? void 0 : errorData.error
+    if (errorDetail instanceof Object) {
+      const status = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.status
+      const message = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.message
+      throw new Error(`${status} ${message}`)
     }
-    throw new Error(
-      `${errorData === null || errorData === void 0 ? void 0 : errorData.error} ${errorData === null || errorData === void 0 ? void 0 : errorData.message}`,
-    )
+    const errorMessage = errorData === null || errorData === void 0 ? void 0 : errorData.message
+    throw new Error(`${errorDetail} ${errorMessage}`) // errorDetail might be a string here
   }
   return response === null || response === void 0 ? void 0 : response.body
 }
@@ -135,15 +133,8 @@ function addAiMarkToContentNodes(contentNodeOrNodes) {
 }
 
 const aiStreamCommand =
-  ({
-    props,
-    action,
-    textOptions,
-    extensionOptions,
-    fetchDataFn, // Renamed from 'r'
-  }) =>
+  ({props, action, textOptions, extensionOptions, fetchDataFn}) =>
   async () => {
-    var _a
     const {editor} = props
     const {state} = editor
     const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
@@ -179,14 +170,14 @@ const aiStreamCommand =
       generatedWith: {options: textOptions, action: action, range: undefined},
     })
     editor.chain().setMeta('aiResponse', aiStorage).run()
-    ;(_a = extensionOptions.onLoading) === null ||
-      _a === void 0 ||
-      _a.call(extensionOptions, {editor, action, isStreaming: true})
+
+    if (extensionOptions.onLoading) {
+      extensionOptions.onLoading({editor, action, isStreaming: true})
+    }
 
     const decoder = new TextDecoder('utf-8')
     const contentAccumulator = ContentAccumulator.create()
 
-    // If inserting at a specific point in plain text and it's not a paragraph, create one
     if (from === to && resolvedTextOptions.format === 'plain-text' && !editor.$pos(to).parent) {
       editor.chain().setTextSelection(to).createParagraphNear().run()
       from += 1
@@ -197,16 +188,14 @@ const aiStreamCommand =
     let currentInsertTo = to
 
     return editor.commands.streamContent(shouldAppend ? to : {from, to}, async ({write}) => {
-      var _b, _c, _d
       try {
         const stream = await fetchDataFn({
-          // `WorkspaceDataFn` was `r`
           editor,
           action,
           text: textToProcess,
           textOptions: resolvedTextOptions,
           extensionOptions,
-          defaultResolver: resolveAiStreamRequest, // Was `c`
+          defaultResolver: resolveAiStreamRequest,
         })
 
         const reader = await (stream === null || stream === void 0 ? void 0 : stream.getReader())
@@ -232,7 +221,7 @@ const aiStreamCommand =
 
           contentAccumulator.append(chunkText)
 
-          if (aiStorage.state === 'idle') return false // Streaming was cancelled
+          if (aiStorage.state === 'idle') return false
 
           Object.assign(aiStorage, {
             state: 'loading',
@@ -240,20 +229,21 @@ const aiStreamCommand =
             error: undefined,
             generatedWith: {options: textOptions, action, range: undefined},
           })
-          ;(_b = extensionOptions.onChunk) === null ||
-            _b === void 0 ||
-            _b.call(extensionOptions, {
+
+          if (extensionOptions.onChunk) {
+            extensionOptions.onChunk({
               editor,
               action,
               isStreaming: true,
               chunk: contentAccumulator.lastPartial,
               response: contentAccumulator.content,
             })
+          }
 
           try {
             if (shouldInsert) {
-              ;({from: currentInsertFrom, to: currentInsertTo} = write({
-                partial: chunkText, // This was `p` (parameter name)
+              const writeResult = write({
+                partial: chunkText,
                 transform: ({defaultTransform}) =>
                   extensionOptions.showDecorations === false
                     ? defaultTransform()
@@ -262,13 +252,14 @@ const aiStreamCommand =
                         editor.schema,
                       ),
                 appendToChain: chain => chain.setMeta('aiResponse', aiStorage),
-              }))
+              })
+              currentInsertFrom = writeResult.from
+              currentInsertTo = writeResult.to
             } else {
               editor.chain().setMeta('aiResponse', aiStorage).run()
             }
           } catch (err) {
             if (err instanceof Error && err.message.startsWith('Invalid content for node')) {
-              // Skip this chunk if it's invalid for the node, but continue streaming
               continue
             }
             throw err
@@ -280,17 +271,18 @@ const aiStreamCommand =
           state: 'idle',
           response: contentAccumulator.content,
           error: undefined,
-          generatedWith: {options: textOptions, action, range: undefined},
+          generatedWith: {options: textOptions, action, range: undefined}, // Range updated later if inserted
         })
         aiStorage.pastResponses.push(contentAccumulator.content)
-        ;(_c = extensionOptions.onSuccess) === null ||
-          _c === void 0 ||
-          _c.call(extensionOptions, {
+
+        if (extensionOptions.onSuccess) {
+          extensionOptions.onSuccess({
             editor,
             action,
             isStreaming: true,
             response: contentAccumulator.content,
           })
+        }
 
         let finalChain = editor.chain().setMeta('aiResponse', aiStorage)
         if (shouldInsert) {
@@ -303,8 +295,12 @@ const aiStreamCommand =
               .unsetAiMark()
           }
           finalChain = finalChain.setTextSelection(
-            collapseToEnd ? currentInsertTo : {from, to: currentInsertTo},
+            collapseToEnd ? currentInsertTo : {from: from, to: currentInsertTo},
           )
+          // Update range in storage
+          if (aiStorage.generatedWith) {
+            aiStorage.generatedWith.range = {from: currentInsertFrom, to: currentInsertTo}
+          }
         }
         return finalChain.run(), true
       } catch (error) {
@@ -315,9 +311,9 @@ const aiStreamCommand =
           generatedWith: {options: textOptions, action, range: undefined},
         })
         editor.chain().setMeta('aiResponse', aiStorage).run()
-        ;(_d = extensionOptions.onError) === null ||
-          _d === void 0 ||
-          _d.call(extensionOptions, error, {editor, action, isStreaming: true})
+        if (extensionOptions.onError) {
+          extensionOptions.onError(error, {editor, action, isStreaming: true})
+        }
         return false
       }
     })
@@ -336,11 +332,12 @@ const acceptSuggestion = (chain, decorationNode) => {
     .run()
 }
 
-const createSuggestionDecorations = (nodesToDecorate, docNodeSize, promptText, suggestionText) => {
+const createSuggestionDecorations = (nodesToDecorate, _docNodeSize, promptText, suggestionText) => {
+  // _docNodeSize was unused
   return nodesToDecorate
     .map(nodeInfo => [
       prosemirrorView.Decoration.inline(nodeInfo.pos, nodeInfo.pos + nodeInfo.node.nodeSize, {
-        class: 'tiptap-ai-prompt', // Assuming this class is desired, though not explicitly used in logic
+        class: 'tiptap-ai-prompt',
       }),
       prosemirrorView.Decoration.node(nodeInfo.pos, nodeInfo.pos + nodeInfo.node.nodeSize, {
         class: 'tiptap-ai-suggestion',
@@ -355,11 +352,14 @@ let currentAbortController
 const abortPreviousRequest = () => {
   if (currentAbortController) {
     currentAbortController.abort()
+    currentAbortController = undefined // Clear after aborting
   }
 }
 
 const triggerAutocompletionFetch = async (editor, textBlocks, autocompletionOptions) => {
+  abortPreviousRequest() // Abort any existing request before starting a new one
   currentAbortController = new AbortController()
+
   const aiExtension = editor.extensionManager.extensions.find(
     ext => ext.name === 'ai' || ext.name === 'aiAdvanced',
   )
@@ -367,8 +367,9 @@ const triggerAutocompletionFetch = async (editor, textBlocks, autocompletionOpti
   if (!aiExtension) {
     throw new Error('AI extension not found.')
   }
+  const aiExtensionOptions = aiExtension.options // Store for easier access
 
-  const {aiStreamResolver} = aiExtension.options
+  const {aiStreamResolver} = aiExtensionOptions
   const recentText =
     (textBlocks.length > 3 ? textBlocks.slice(textBlocks.length - 3) : textBlocks)
       .filter(block => block.node.textContent)
@@ -378,7 +379,7 @@ const triggerAutocompletionFetch = async (editor, textBlocks, autocompletionOpti
 
   const {inputLength, modelName} = autocompletionOptions
   const textForCompletion = recentText
-    .slice(recentText.length - inputLength, recentText.length)
+    .slice(Math.max(0, recentText.length - inputLength), recentText.length)
     .trimStart()
   const doc = editor.view.state.doc
 
@@ -387,19 +388,18 @@ const triggerAutocompletionFetch = async (editor, textBlocks, autocompletionOpti
   }
 
   ;(async ({text, aborter}) => {
-    var _a, _b, _c, _d, _e, _f
     let accumulatedText = ''
     try {
-      ;(_b = (_a = aiExtension.options).onLoading) === null ||
-        _b === void 0 ||
-        _b.call(_a, {action: 'autocomplete', isStreaming: true, editor})
+      if (aiExtensionOptions.onLoading) {
+        aiExtensionOptions.onLoading({action: 'autocomplete', isStreaming: true, editor})
+      }
 
       const stream = await aiStreamResolver({
         editor,
         action: 'autocomplete',
         text,
         textOptions: {modelName},
-        extensionOptions: aiExtension.options,
+        extensionOptions: aiExtensionOptions,
         aborter,
         defaultResolver: resolveAiStreamRequest,
       })
@@ -408,52 +408,61 @@ const triggerAutocompletionFetch = async (editor, textBlocks, autocompletionOpti
 
       const reader = stream.getReader()
       const decoder = new TextDecoder()
-      let isDone = false
 
-      while (!isDone) {
+      while (true) {
         const {value: streamValue, done: streamDone} = await reader.read()
+        if (streamDone) break // Exit loop when stream is done
+
         const chunk = decoder.decode(streamValue, {stream: true})
-        isDone = streamDone
         accumulatedText += chunk
 
         const decorations = createSuggestionDecorations(
           [textBlocks[textBlocks.length - 1]],
-          doc.nodeSize, // docNodeSize was 'e' (second param to createSuggestionDecorations)
+          doc.nodeSize,
           textBlocks[textBlocks.length - 1].node.textContent,
           `${accumulatedText || ''}`,
         )
         const tr = editor.view.state.tr.setMeta('asyncDecorations', decorations)
         editor.view.dispatch(tr)
       }
-      isDone = true // Explicitly set after loop, though `while(!isDone)` covers it.
-      ;(_d = (_c = aiExtension.options).onSuccess) === null ||
-        _d === void 0 ||
-        _d.call(_c, {action: 'autocomplete', isStreaming: true, editor, response: accumulatedText})
+
+      if (aiExtensionOptions.onSuccess) {
+        aiExtensionOptions.onSuccess({
+          action: 'autocomplete',
+          isStreaming: true,
+          editor,
+          response: accumulatedText,
+        })
+      }
     } catch (error) {
-      ;(_f = (_e = aiExtension.options).onError) === null ||
-        _f === void 0 ||
-        _f.call(_e, error, {action: 'autocomplete', isStreaming: true, editor})
+      // Don't report AbortError if it was intentional
+      if (error.name === 'AbortError') {
+        console.log('Autocompletion fetch aborted.')
+        return
+      }
+      if (aiExtensionOptions.onError) {
+        aiExtensionOptions.onError(error, {action: 'autocomplete', isStreaming: true, editor})
+      }
     }
   })({text: textForCompletion, aborter: currentAbortController})
 }
 
-const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionPlugin'}) => {
+const AiAutocompletionPlugin = ({
+  editor,
+  options: pluginOptions,
+  pluginKey = 'AiAutocompletionPlugin',
+}) => {
   const handleKeyDownForAutocompletion = view => {
-    // Was 'r'
-    var _a, _b
-    const isTableCell = // Was 'r' (inner variable)
-      (currentEditor => {
-        // Was 'e' (parameter to inner func)
-        var _a
-        return (_a = tiptapCore.findParentNode(node => node.type.name === 'tableCell')(
-          currentEditor.state.selection,
-        )) === null || _a === void 0
-          ? void 0
-          : _a.node
-      })(editor)?.type.name === 'tableCell'
+    const parentNodeInfo = tiptapCore.findParentNode(node => node.type.name === 'tableCell')(
+      editor.state.selection,
+    )
+    const parentNode =
+      parentNodeInfo === null || parentNodeInfo === void 0 ? void 0 : parentNodeInfo.node
+    const isTableCell =
+      (parentNode === null || parentNode === void 0 ? void 0 : parentNode.type.name) === 'tableCell'
 
-    if (options.trigger === 'Tab' && isTableCell) {
-      return false // Don't interfere with table navigation
+    if (pluginOptions.trigger === 'Tab' && isTableCell) {
+      return false
     }
 
     const cursorPos = editor.state.selection.to
@@ -462,21 +471,24 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
       {from: 0, to: cursorPos},
       node => node.isTextblock,
     )
-    const lastTextBlock = textBlocks[textBlocks.length - 1]
 
-    // Condition to trigger autocompletion (e.g. at the end of a text node in a text block)
+    if (!textBlocks.length) return // No text blocks found
+
+    const lastTextBlock = textBlocks[textBlocks.length - 1]
+    const lastChildNode = lastTextBlock.node.lastChild
+    const lastChildNodeType =
+      lastChildNode === null || lastChildNode === void 0 ? void 0 : lastChildNode.type
+
     if (
-      cursorPos === lastTextBlock.pos + lastTextBlock.node.nodeSize - 1 &&
+      cursorPos === lastTextBlock.pos + lastTextBlock.node.nodeSize - 1 && // Cursor at the very end of the last text block
       (lastTextBlock.node.type.isText ||
         (lastTextBlock.node.type.isTextblock &&
           lastTextBlock.node.childCount !== 0 &&
-          ((_b =
-            (_a = lastTextBlock.node.lastChild) === null || _a === void 0 ? void 0 : _a.type) ===
-            null || _b === void 0
+          (lastChildNodeType === null || lastChildNodeType === void 0
             ? void 0
-            : _b.isText)))
+            : lastChildNodeType.isText)))
     ) {
-      triggerAutocompletionFetch(editor, textBlocks, options)
+      triggerAutocompletionFetch(editor, textBlocks, pluginOptions)
     }
   }
 
@@ -487,7 +499,7 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
     state: {
       init: () => prosemirrorView.DecorationSet.empty,
       apply(tr, oldDecorations, oldState, newState) {
-        const {doc, docChanged} = tr
+        const {docChanged} = tr // `doc` was unused
         const asyncDecorations = tr.getMeta('asyncDecorations')
 
         if (
@@ -499,10 +511,10 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
         }
 
         if (!oldState.selection.eq(newState.selection)) {
-          abortPreviousRequest()
+          abortPreviousRequest() // Abort if selection changes
         }
         const mappedDecorations = oldDecorations.map(tr.mapping, tr.doc)
-        return prosemirrorView.DecorationSet.create(doc, asyncDecorations || [])
+        return prosemirrorView.DecorationSet.create(tr.doc, asyncDecorations || [])
       },
     },
     props: {
@@ -510,41 +522,40 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
         return this.getState(state)
       },
       handleKeyDown(view, event) {
-        var _a
-        const decorations = this.getState(view.state)
-        const [promptDecoration, suggestionDecoration] = // promptDecoration was 'l', suggestionDecoration was 'c'
+        const currentPluginState = this.getState(view.state)
+        const decorationsArray =
           view.state.tr.getMeta('asyncDecorations') ||
-          (decorations === null || decorations === void 0 ? void 0 : decorations.find()) ||
+          (currentPluginState === null || currentPluginState === void 0
+            ? void 0
+            : currentPluginState.find()) ||
           []
+        const promptDecoration = decorationsArray[0] // Assuming prompt is first if present
+        const suggestionDecoration = decorationsArray[1] // Assuming suggestion is second
 
         const clearDecorations = () => {
-          const tr = view.state.tr.setMeta('asyncDecorations', [])
-          if (decorations) {
-            decorations.remove([promptDecoration])
-            decorations.remove([suggestionDecoration])
-          }
-          view.dispatch(tr)
+          const transaction = view.state.tr.setMeta('asyncDecorations', [])
+          // oldDecorations no longer directly available, handled by apply
+          view.dispatch(transaction)
         }
 
-        const hasSuggestion = !!promptDecoration // was 'p'
+        const hasSuggestion = !!suggestionDecoration
 
-        const shouldTrigger = // was 'n' (inner var)
-          (
-            options.checkTrigger !== null && options.checkTrigger !== undefined
-              ? options.checkTrigger
-              : (evt, keyEvt) => {
-                  // was (t,e) => ...
-                  const isTriggerKey = keyEvt.key === options.trigger
-                  if (isTriggerKey && keyEvt.key !== ' ') {
-                    keyEvt.preventDefault()
-                    keyEvt.stopPropagation()
-                  }
-                  return isTriggerKey
-                }
-          )(view, event)
+        const checkTriggerFunction =
+          pluginOptions.checkTrigger ||
+          ((_view, keyEvent) => {
+            const isTriggerKey = keyEvent.key === pluginOptions.trigger
+            if (isTriggerKey && keyEvent.key !== ' ') {
+              // Prevent default for non-space triggers
+              keyEvent.preventDefault()
+              keyEvent.stopPropagation()
+            }
+            return isTriggerKey
+          })
 
-        if (shouldTrigger) {
-          if (event.key === options.accept && hasSuggestion) {
+        const shouldTriggerAutocompletion = checkTriggerFunction(view, event)
+
+        if (shouldTriggerAutocompletion) {
+          if (event.key === pluginOptions.accept && hasSuggestion) {
             event.preventDefault()
             event.stopPropagation()
             acceptSuggestion(editor.chain(), suggestionDecoration)
@@ -554,8 +565,8 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
           if (debounceTimeoutId) clearTimeout(debounceTimeoutId)
           debounceTimeoutId = setTimeout(() => {
             handleKeyDownForAutocompletion(view)
-          }, options.debounce)
-          return false
+          }, pluginOptions.debounce)
+          return false // Let other keydown handlers for the trigger key run if not accepting
         }
 
         switch (event.key) {
@@ -563,9 +574,10 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
             if (hasSuggestion) {
               abortPreviousRequest()
               clearDecorations()
+              return true // Handled
             }
             break
-          case options.accept: // Accept key (e.g. Tab)
+          case pluginOptions.accept:
             if (hasSuggestion) {
               event.preventDefault()
               event.stopPropagation()
@@ -575,12 +587,15 @@ const AiAutocompletionPlugin = ({editor, options, pluginKey = 'AiAutocompletionP
             }
             break
           default:
-            abortPreviousRequest()
-            clearDecorations()
+            // If any other key is pressed while a suggestion is active, clear it.
+            if (hasSuggestion) {
+              abortPreviousRequest()
+              clearDecorations()
+            }
             if (debounceTimeoutId) clearTimeout(debounceTimeoutId)
             break
         }
-        return false
+        return false // Not handled
       },
     },
   })
@@ -619,11 +634,9 @@ const AiMark = tiptapCore.Mark.create({
   },
 })
 
-// Tries to restore selection to encompass the newly inserted/replaced content
 const restoreSelectionAfterReplace = ({dispatch, tr, oldSelection}) => {
   if (dispatch) {
     const findLastReplaceStepResolvedPos = ((transaction, minStepIndex, bias) => {
-      // was 'r'
       const lastStepIndex = transaction.steps.length - 1
       if (lastStepIndex < minStepIndex) return -1
 
@@ -639,25 +652,23 @@ const restoreSelectionAfterReplace = ({dispatch, tr, oldSelection}) => {
       const mapping = transaction.mapping.maps[lastStepIndex]
       let resolvedPos = 0
       mapping.forEach((_oldStart, _oldEnd, _newStart, newEnd) => {
-        // was (t,e,n,o)
-        if (resolvedPos === 0) resolvedPos = newEnd
+        if (resolvedPos === 0) resolvedPos = newEnd // Capture the first newEnd
       })
       return prosemirrorState.Selection.near(transaction.doc.resolve(resolvedPos), bias)
     })(tr, tr.steps.length - 1, -1)
 
     if (findLastReplaceStepResolvedPos !== -1) {
       const newSelection = ((transaction, newResolvedSelection, previousSelection) => {
-        // was 'i'
         const {doc} = transaction
         const docStart = prosemirrorState.TextSelection.atStart(doc).from
         const docEnd = prosemirrorState.TextSelection.atEnd(doc).to
-        const from = tiptapCore.minMax(previousSelection.from, docStart, docEnd)
-        const to = tiptapCore.minMax(newResolvedSelection.to, docStart, docEnd)
+        const from = tiptapCore.minMax(previousSelection.from, docStart, docEnd) // Anchor to old from
+        const to = tiptapCore.minMax(newResolvedSelection.to, docStart, docEnd) // Head to new content's end
         return prosemirrorState.TextSelection.create(doc, from, to)
       })(tr, findLastReplaceStepResolvedPos, oldSelection)
 
       tr.setSelection(newSelection)
-      dispatch(tr)
+      dispatch(tr) // Dispatch should be handled by the caller of command if needed
       return true
     }
   }
@@ -665,7 +676,6 @@ const restoreSelectionAfterReplace = ({dispatch, tr, oldSelection}) => {
 }
 
 const resolveAiCompletionRequest = async ({action, text, textOptions, extensionOptions}) => {
-  var _a, _b
   const {appId, token, baseUrl: configBaseUrl} = extensionOptions
   const baseUrl =
     configBaseUrl !== null && configBaseUrl !== void 0 ? configBaseUrl : AI_DEFAULT_BASE_URL
@@ -689,17 +699,16 @@ const resolveAiCompletionRequest = async ({action, text, textOptions, extensionO
   const responseData = await response.json()
 
   if (!response.ok) {
-    if (
-      (responseData === null || responseData === void 0 ? void 0 : responseData.error) instanceof
-      Object
-    ) {
-      throw new Error(
-        `${(_a = responseData === null || responseData === void 0 ? void 0 : responseData.error) === null || _a === void 0 ? void 0 : _a.status} ${(_b = responseData === null || responseData === void 0 ? void 0 : responseData.error) === null || _b === void 0 ? void 0 : _b.message}`,
-      )
+    const errorDetail =
+      responseData === null || responseData === void 0 ? void 0 : responseData.error
+    if (errorDetail instanceof Object) {
+      const status = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.status
+      const message = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.message
+      throw new Error(`${status} ${message}`)
     }
-    throw new Error(
-      `${responseData === null || responseData === void 0 ? void 0 : responseData.error} ${responseData === null || responseData === void 0 ? void 0 : responseData.message}`,
-    )
+    const errorMessage =
+      responseData === null || responseData === void 0 ? void 0 : responseData.message
+    throw new Error(`${errorDetail} ${errorMessage}`)
   }
   return responseData === null || responseData === void 0 ? void 0 : responseData.response
 }
@@ -707,125 +716,124 @@ const resolveAiCompletionRequest = async ({action, text, textOptions, extensionO
 const aiCompletionCommand =
   ({props, action, textOptions, extensionOptions, fetchDataFn}) =>
   async () => {
-    var _a
     const {editor} = props
     const {
       state,
       state: {selection},
-    } = editor // `selection` was 'd'
-    const aiStorage = editor.storage.ai || editor.storage.aiAdvanced // `aiStorage` was 'p'
+    } = editor
+    const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
 
     const resolvedTextOptions = {
-      // `resolvedTextOptions` was 'u'
       collapseToEnd: true,
       format: 'plain-text',
       ...textOptions,
     }
 
-    const {
-      from,
-      to,
-    } = // `from` was 'm', `to` was 'g'
+    const {from: initialFrom, to: initialTo} =
       typeof resolvedTextOptions.insertAt === 'number'
         ? {from: resolvedTextOptions.insertAt, to: resolvedTextOptions.insertAt}
         : resolvedTextOptions.insertAt || selection
 
-    const textToProcess = // `textToProcess` was 'h'
+    const textToProcess =
       (textOptions === null || textOptions === void 0 ? void 0 : textOptions.text) ||
       (resolvedTextOptions.plainText && resolvedTextOptions.format !== 'plain-text'
-        ? state.doc.textBetween(from, to, ' ')
-        : getHtmlContentBetween(editor, from, to))
+        ? state.doc.textBetween(initialFrom, initialTo, ' ')
+        : getHtmlContentBetween(editor, initialFrom, initialTo))
 
     const shouldInsert =
-      (textOptions === null || textOptions === void 0 ? void 0 : textOptions.insert) !== false // `shouldInsert` was 'v'
-    const shouldAppend = resolvedTextOptions.append && resolvedTextOptions.insertAt === undefined // `shouldAppend` was 'f'
+      (textOptions === null || textOptions === void 0 ? void 0 : textOptions.insert) !== false
+    const shouldAppend = resolvedTextOptions.append && resolvedTextOptions.insertAt === undefined
 
     if (!textToProcess) {
       return false
     }
     if (textOptions.startsInline === undefined) {
+      // Ensure this is set if not provided
       textOptions.startsInline = isSelectionSpanningMultipleBlocks(selection)
     }
 
     Object.assign(aiStorage, {
       state: 'loading',
-      response: '',
+      response: '', // Clear previous response
       error: undefined,
       generatedWith: {options: textOptions, action: action, range: undefined},
     })
     editor.chain().setMeta('aiResponse', aiStorage).run()
-    ;(_a = extensionOptions.onLoading) === null ||
-      _a === void 0 ||
-      _a.call(extensionOptions, {editor, action, isStreaming: false})
 
-    let insertPosition = from // `insertPosition` was 'x'
-    if (resolvedTextOptions.append) {
-      insertPosition = to
+    if (extensionOptions.onLoading) {
+      extensionOptions.onLoading({editor, action, isStreaming: false})
     }
 
+    const insertAtPos = shouldAppend ? initialTo : initialFrom
+
     return editor.commands.streamContent(
-      // Using streamContent for unified update logic, though it's not a "stream" here
-      shouldAppend ? to : {from, to},
+      // Even for non-stream, use this for consistent update logic
+      shouldAppend ? initialTo : {from: initialFrom, to: initialTo},
       async ({write}) => {
-        var _b, _c
         try {
           const responseText = await fetchDataFn({
-            // `WorkspaceDataFn` was 'i'
             editor,
             action,
             text: textToProcess,
-            textOptions,
+            textOptions, // Pass original textOptions for the API
             extensionOptions,
-            defaultResolver: resolveAiCompletionRequest, // was `w`
+            defaultResolver: resolveAiCompletionRequest,
           })
 
-          if (!responseText) return false
+          if (responseText === undefined || responseText === null) {
+            // Check if response is empty
+            Object.assign(aiStorage, {state: 'idle', error: new Error('Empty response from AI.')})
+            editor.chain().setMeta('aiResponse', aiStorage).run()
+            if (extensionOptions.onError) {
+              extensionOptions.onError(aiStorage.error, {editor, action, isStreaming: false})
+            }
+            return false
+          }
 
           Object.assign(aiStorage, {
+            // Initial update before potential insertion
             state: 'idle',
-            message: responseText, // Note: API might return 'message' or 'response'
+            response: responseText, // Store the actual response here
             error: undefined,
-            generatedWith: {
-              options: textOptions,
-              action,
-              range: shouldInsert ? {from, to} : undefined,
-            },
           })
-          aiStorage.pastResponses.push(responseText)
+          // Do not set generatedWith.range yet, it's set after successful insertion
+
+          aiStorage.pastResponses.push(responseText) // Add to history
 
           if (shouldInsert) {
+            const oldSelectionForRestore = {from: initialFrom, to: initialTo}
             const writeResult = write({
-              // `writeResult` was 'e'
-              partial: responseText,
+              partial: responseText, // Treat whole response as one "partial" chunk
               appendToChain: chain =>
                 chain
-                  .setMeta('aiResponse', aiStorage)
+                  .setMeta('aiResponse', aiStorage) // Ensure aiStorage is up-to-date in meta
                   .command(({dispatch, tr}) =>
-                    restoreSelectionAfterReplace({dispatch, tr, oldSelection: {from, to}}),
+                    restoreSelectionAfterReplace({
+                      dispatch,
+                      tr,
+                      oldSelection: oldSelectionForRestore,
+                    }),
                   ),
             })
+            // After successful write, update generatedWith with the actual range
             if (aiStorage.generatedWith) {
               aiStorage.generatedWith.range = {from: writeResult.from, to: writeResult.to}
             }
           } else {
+            // If not inserting, still update meta with the response available for manual accept
             editor.chain().setMeta('aiResponse', aiStorage).run()
           }
-
+          // Final state update after all operations
           Object.assign(aiStorage, {
             state: 'idle',
-            response: responseText,
-            error: undefined,
-            generatedWith: {
-              options: textOptions,
-              action,
-              range: shouldInsert ? {from: insertPosition, to} : undefined,
-            },
+            response: responseText, // Ensure response is still set
+            // generatedWith might have been updated with range if inserted
           })
-          aiStorage.pastResponses.push(responseText)
-          ;(_b = extensionOptions.onSuccess) === null ||
-            _b === void 0 ||
-            _b.call(extensionOptions, {editor, action, isStreaming: false, response: responseText})
 
+          if (extensionOptions.onSuccess) {
+            extensionOptions.onSuccess({editor, action, isStreaming: false, response: responseText})
+          }
+          // Final meta update if not inserting, or if further changes to aiStorage happened
           editor.chain().setMeta('aiResponse', aiStorage).run()
           return true
         } catch (error) {
@@ -833,12 +841,12 @@ const aiCompletionCommand =
             state: 'error',
             response: undefined,
             error: error,
-            generatedWith: {options: textOptions, action, range: undefined},
+            generatedWith: {options: textOptions, action, range: undefined}, // Reset on error
           })
           editor.chain().setMeta('aiResponse', aiStorage).run()
-          ;(_c = extensionOptions.onError) === null ||
-            _c === void 0 ||
-            _c.call(extensionOptions, error, {editor, action, isStreaming: false})
+          if (extensionOptions.onError) {
+            extensionOptions.onError(error, {editor, action, isStreaming: false})
+          }
           return false
         }
       },
@@ -847,7 +855,6 @@ const aiCompletionCommand =
   }
 
 const resolveAiImageRequest = async ({text, imageOptions, extensionOptions}) => {
-  var _a, _b
   const {appId, token, baseUrl: configBaseUrl} = extensionOptions
   const baseUrl =
     configBaseUrl !== null && configBaseUrl !== void 0 ? configBaseUrl : AI_DEFAULT_BASE_URL
@@ -865,38 +872,38 @@ const resolveAiImageRequest = async ({text, imageOptions, extensionOptions}) => 
 
   if (!response.ok) {
     const errorData = await response.json()
-    if ((errorData === null || errorData === void 0 ? void 0 : errorData.error) instanceof Object) {
-      throw new Error(
-        `${(_a = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _a === void 0 ? void 0 : _a.status} ${(_b = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _b === void 0 ? void 0 : _b.message}`,
-      )
+    const errorDetail = errorData === null || errorData === void 0 ? void 0 : errorData.error
+    if (errorDetail instanceof Object) {
+      const status = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.status
+      const message = errorDetail === null || errorDetail === void 0 ? void 0 : errorDetail.message
+      throw new Error(`${status} ${message}`)
     }
-    throw new Error(
-      `${errorData === null || errorData === void 0 ? void 0 : errorData.error} ${errorData === null || errorData === void 0 ? void 0 : errorData.message}`,
-    )
+    const errorMessage = errorData === null || errorData === void 0 ? void 0 : errorData.message
+    throw new Error(`${errorDetail} ${errorMessage}`)
   }
   const responseData = await response.json()
-  return responseData === null || responseData === void 0 ? void 0 : responseData.response // Assuming the image URL is in 'response'
+  return responseData === null || responseData === void 0 ? void 0 : responseData.response
 }
 
 const aiImageCommand =
   ({props, imageOptions, extensionOptions, fetchDataFn}) =>
   async () => {
-    var _a, _b, _c, _d
     const {editor} = props
     const {state} = editor
     const {
       selection: {from, to},
     } = state
 
+    const textFromOptions =
+      imageOptions === null || imageOptions === void 0 ? void 0 : imageOptions.text
     const textForImage =
-      (_a = imageOptions === null || imageOptions === void 0 ? void 0 : imageOptions.text) !==
-        null && _a !== void 0
-        ? _a
+      textFromOptions !== null && textFromOptions !== void 0
+        ? textFromOptions
         : state.doc.textBetween(from, to, ' ')
 
-    ;(_b = extensionOptions.onLoading) === null ||
-      _b === void 0 ||
-      _b.call(extensionOptions, {action: 'image', isStreaming: false, editor})
+    if (extensionOptions.onLoading) {
+      extensionOptions.onLoading({action: 'image', isStreaming: false, editor})
+    }
 
     try {
       const imageUrl = await fetchDataFn({
@@ -904,174 +911,159 @@ const aiImageCommand =
         text: textForImage,
         imageOptions,
         extensionOptions,
-      }) // fetchDataFn was 'o'
+      })
+      if (!imageUrl) {
+        // Handle case where image URL might be empty/null
+        throw new Error('Received empty image URL from AI service.')
+      }
       editor.chain().focus().setImage({src: imageUrl, alt: textForImage, title: textForImage}).run()
-      ;(_c = extensionOptions.onSuccess) === null ||
-        _c === void 0 ||
-        _c.call(extensionOptions, {action: 'image', isStreaming: false, editor})
+
+      if (extensionOptions.onSuccess) {
+        extensionOptions.onSuccess({
+          action: 'image',
+          isStreaming: false,
+          editor,
+          response: imageUrl,
+        })
+      }
       return true
     } catch (error) {
-      ;(_d = extensionOptions.onError) === null ||
-        _d === void 0 ||
-        _d.call(extensionOptions, error, {action: 'image', isStreaming: false, editor})
+      if (extensionOptions.onError) {
+        extensionOptions.onError(error, {action: 'image', isStreaming: false, editor})
+      }
       return false
     }
   }
 
 const dispatchAiTextAction = (commandProps, action, textActionOptions) => {
   const {editor} = commandProps
-  const {stream = false} = textActionOptions
+  const {stream = false} = textActionOptions // Default to non-streaming if not specified
   const aiExtension = editor.extensionManager.extensions.find(
     ext => ext.name === 'ai' || ext.name === 'aiAdvanced',
   )
+  // Ensure aiStorage is fetched after confirming aiExtension exists
+  if (!aiExtension) {
+    console.error('[tiptap-ai] AI extension not found.')
+    return false
+  }
   const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
 
-  if (!aiExtension || aiStorage.state === 'loading') {
+  if (aiStorage.state === 'loading') {
+    console.warn('[tiptap-ai] AI is already processing a request.')
     return false
   }
 
   const {baseUrl} = aiExtension.options
 
-  // Demo endpoint warning
   if (
-    (() => {
-      // IIFE for environment check
-      if (typeof window === 'undefined') return true // Skip in non-browser env
-      const {location} = window
-      const {hostname} = location
-      return ![
-        'localhost',
-        'tiptap.dev',
-        'embed-pro.tiptap.dev',
-        'ai-demo.tiptap.dev',
-        'demos.tiptap.dev',
-        'demo-pitch.tiptap.dev',
-      ].includes(hostname)
-    })() &&
+    typeof window !== 'undefined' &&
+    ![
+      'localhost',
+      '127.0.0.1',
+      'tiptap.dev', // Add actual production domains if any
+      'embed-pro.tiptap.dev',
+      'ai-demo.tiptap.dev',
+      'demos.tiptap.dev',
+      'demo-pitch.tiptap.dev',
+    ].includes(window.location.hostname) &&
     baseUrl === AI_DEMO_BASE_URL
   ) {
     console.warn(
       '[tiptap-ai] You’re using our demo AI endpoint. This is highly discouraged in your own projects and may break things.\n\nPlease register an account at https://tiptap.dev',
     )
   }
+  const resolverFn = stream ? resolveAiStreamRequest : resolveAiCompletionRequest
+  const commandFn = stream ? aiStreamCommand : aiCompletionCommand
 
-  if (stream) {
-    aiStreamCommand({
-      props: commandProps,
-      action,
-      textOptions: textActionOptions,
-      extensionOptions: aiExtension.options,
-      fetchDataFn: resolveAiStreamRequest, // Was `c`
-      // defaultResolver: resolveAiStreamRequest, // This was part of fetchDataFn's signature, now directly passed
-    })()
-    return true
-  } else {
-    aiCompletionCommand({
-      props: commandProps,
-      action,
-      textOptions: textActionOptions,
-      extensionOptions: aiExtension.options,
-      fetchDataFn: resolveAiCompletionRequest, // Was `w`
-      // defaultResolver: resolveAiCompletionRequest, // As above
-    })()
-    return true
-  }
+  commandFn({
+    props: commandProps,
+    action,
+    textOptions: textActionOptions,
+    extensionOptions: aiExtension.options,
+    fetchDataFn: resolverFn,
+  })() // Invoke the command
+  return true
 }
 
-// Calculates the "effective" depth of a fragment for insertion purposes.
-// If preferFirstChild is true, it traverses down .firstChild.content, otherwise .lastChild.content.
 function getFragmentContentDepth(fragment, preferFirstChild) {
-  var _a, _b
   if (!fragment) return -1
-  return (
-    1 +
-    getFragmentContentDepth(
-      preferFirstChild
-        ? (_a = fragment.firstChild) === null || _a === void 0
-          ? void 0
-          : _a.content
-        : (_b = fragment.lastChild) === null || _b === void 0
-          ? void 0
-          : _b.content,
-      preferFirstChild,
-    )
-  )
+  const childNode = preferFirstChild ? fragment.firstChild : fragment.lastChild
+  const childContent = childNode === null || childNode === void 0 ? void 0 : childNode.content
+  return 1 + getFragmentContentDepth(childContent, preferFirstChild)
 }
 
 const StreamContentPluginKey = new prosemirrorState.PluginKey('streamContent')
-let streamTransactionListeners = [] // Was `C`
+let streamTransactionListeners = []
 
 const StreamContentExtension = tiptapCore.Extension.create({
   name: 'streamContent',
   onTransaction({transaction}) {
-    streamTransactionListeners.forEach(listener => listener(transaction))
+    // Avoid modifying listeners array while iterating
+    const currentListeners = [...streamTransactionListeners]
+    currentListeners.forEach(listener => listener(transaction))
   },
   addCommands() {
     return {
       streamContent:
-        (rangeOrPosition, streamHandlerFn, options) =>
+        (rangeOrPosition, streamHandlerFn, streamOptions) =>
         ({editor}) => {
-          // rangeOrPosition was 'e', streamHandlerFn was 'n', options was 'r'
           const respondInline =
-            (options === null || options === void 0 ? void 0 : options.respondInline) === undefined
-              ? true
-              : options.respondInline // was 'l'
-          const streamStartTime = Date.now() // was 'c'
-          let from = -1,
-            to = -1 // `from` was 'd', `to` was 'p'
+            (streamOptions === null || streamOptions === void 0
+              ? void 0
+              : streamOptions.respondInline) !== false // Default true
+          const streamStartTime = Date.now()
+          let fromPos = -1,
+            toPos = -1
 
           if (typeof rangeOrPosition === 'number') {
-            from = rangeOrPosition
-            to = rangeOrPosition
-          } else if ('from' in rangeOrPosition && 'to' in rangeOrPosition) {
-            from = rangeOrPosition.from
-            to = rangeOrPosition.to
+            fromPos = rangeOrPosition
+            toPos = rangeOrPosition
+          } else if (rangeOrPosition && 'from' in rangeOrPosition && 'to' in rangeOrPosition) {
+            fromPos = rangeOrPosition.from
+            toPos = rangeOrPosition.to
           }
 
-          const isCollapsedSelection = from === to // was 'u'
-          if (from === -1 || to === -1) return false
+          const isCollapsedSelection = fromPos === toPos
+          if (fromPos === -1 || toPos === -1) return false
 
-          let currentFragmentSize = 0 // was 'm'
-          const contentAccumulator = ContentAccumulator.create() // was 'g'
-          const mapping = new prosemirrorTransform.Mapping() // was 'h'
+          let currentFragmentSize = 0
+          const contentAccumulator = ContentAccumulator.create()
+          const mapping = new prosemirrorTransform.Mapping()
 
-          function transactionListener(transaction) {
-            // was 'v'
+          function transactionListenerForStream(transaction) {
+            const metaForStream = transaction.getMeta(StreamContentPluginKey)
             if (
               !transaction.docChanged ||
-              (transaction.getMeta(StreamContentPluginKey) !== undefined &&
-                transaction.getMeta(StreamContentPluginKey).startTime === streamStartTime)
+              (metaForStream !== undefined && metaForStream.startTime === streamStartTime)
             ) {
-              // Do not apply mapping if the change is from this stream or no doc change
+              // No mapping if change is from this stream or no doc change
             } else {
               mapping.appendMapping(transaction.mapping)
             }
           }
-          streamTransactionListeners.push(transactionListener)
+          streamTransactionListeners.push(transactionListenerForStream)
 
-          const defaultTransformFragment = (
-            transformInput, // was 'f'
-          ) =>
+          const defaultTransformFragment = transformInput =>
             prosemirrorModel.Fragment.from(
               tiptapCore.createNodeFromContent(
                 transformInput.buffer,
                 transformInput.editor.state.schema,
                 {
-                  parseOptions: (options === null || options === void 0
+                  parseOptions: (streamOptions === null || streamOptions === void 0
                     ? void 0
-                    : options.parseOptions) || {preserveWhitespace: false},
+                    : streamOptions.parseOptions) || {preserveWhitespace: 'full'}, // preserveWhitespace: false can strip spaces
                 },
               ),
             )
 
           ;(async () => {
             const streamControls = {
-              // was 'e'
               cleanup() {
                 const initialLength = streamTransactionListeners.length
                 streamTransactionListeners = streamTransactionListeners.filter(
-                  listener => listener !== transactionListener,
+                  listener => listener !== transactionListenerForStream,
                 )
+                // Finalize only if this specific listener was removed
                 if (streamTransactionListeners.length === initialLength - 1) {
                   contentAccumulator.finalize()
                   editor
@@ -1086,14 +1078,13 @@ const StreamContentExtension = tiptapCore.Extension.create({
                 }
               },
               write({
-                partial: partialContent, // was 'e' (inner)
-                transform: transformFn = defaultTransformFragment, // was 'n' (inner)
-                appendToChain: chainAppender = chain => chain, // was 'i' (inner)
+                partial: partialContent,
+                transform: transformFn = defaultTransformFragment,
+                appendToChain: chainAppender = chain => chain,
               }) {
-                var _a
                 let chain = editor.chain()
                 if (contentAccumulator.content === '' && !isCollapsedSelection) {
-                  chain = chain.deleteRange({from, to})
+                  chain = chain.deleteRange({from: fromPos, to: toPos})
                 }
                 contentAccumulator.append(partialContent)
 
@@ -1102,19 +1093,16 @@ const StreamContentExtension = tiptapCore.Extension.create({
                     startTime: streamStartTime,
                     partial: contentAccumulator.lastPartial,
                     buffer: contentAccumulator.content,
-                    done: true, // Should be true only on final write?
+                    done: false, // Not done until cleanup
                   })
-                  .setMeta('preventClearDocument', true) // Prevent accidental clearing
+                  .setMeta('preventClearDocument', true)
 
                 const fragmentToInsert = prosemirrorModel.Fragment.from(
-                  // was 'v' (inner var)
                   transformFn({
                     partial: contentAccumulator.lastPartial,
                     buffer: contentAccumulator.content,
                     editor,
-                    defaultTransform: (
-                      customBuffer, // was 't' (inner param)
-                    ) =>
+                    defaultTransform: customBuffer =>
                       defaultTransformFragment({
                         buffer: customBuffer || contentAccumulator.content,
                         partial: partialContent,
@@ -1123,73 +1111,73 @@ const StreamContentExtension = tiptapCore.Extension.create({
                   }),
                 )
 
-                let isFragmentInvalid = false // was 'x'
+                let isFragmentInvalid = false
                 try {
                   fragmentToInsert.forEach(node => {
                     node.check()
                   })
                 } catch (err) {
                   isFragmentInvalid = true
+                  console.error('Invalid fragment:', err, fragmentToInsert.toJSON())
                 }
 
-                if (
-                  (frag => {
-                    // was 'e' (inner func)
-                    let isEmpty = true
-                    frag.forEach(node => {
-                      if (isEmpty) {
-                        isEmpty = tiptapCore.isNodeEmpty(node, {
-                          checkChildren: true,
-                          ignoreWhitespace: true,
-                        })
-                      }
-                    })
-                    return isEmpty
-                  })(fragmentToInsert) ||
-                  isFragmentInvalid
-                ) {
-                  chain.run()
+                const isFragmentEffectivelyEmpty = (frag => {
+                  let isEmpty = true
+                  frag.forEach(node => {
+                    if (isEmpty) {
+                      isEmpty = tiptapCore.isNodeEmpty(node, {
+                        checkChildren: true,
+                        ignoreWhitespace: true, // Consider if whitespace-only should be empty
+                      })
+                    }
+                  })
+                  return isEmpty
+                })(fragmentToInsert)
+
+                if (isFragmentEffectivelyEmpty || isFragmentInvalid) {
+                  chain.run() // Run chain to set meta
                   return {
                     buffer: contentAccumulator.content,
-                    from: mapping.map(from),
-                    to: mapping.map(from) + currentFragmentSize,
+                    from: mapping.map(fromPos),
+                    to: mapping.map(fromPos) + currentFragmentSize, // Use previous size
                   }
                 }
 
+                const firstChildOfFragment = fragmentToInsert.firstChild
                 const isFirstChildText =
-                  ((_a = fragmentToInsert.firstChild) === null || _a === void 0
+                  (firstChildOfFragment === null || firstChildOfFragment === void 0
                     ? void 0
-                    : _a.isText) || false // was 'y'
-                const maxDocSize = editor.state.doc.nodeSize - 2 // was 'w'
+                    : firstChildOfFragment.isText) || false
+                const maxDocSize = editor.state.doc.nodeSize - 2
 
                 let mappedFrom = tiptapCore.minMax(
-                  mapping.map(from, 1),
+                  mapping.map(fromPos, 1),
                   isFirstChildText ? 1 : 0,
                   maxDocSize,
-                ) // was 'O'
-                const mappedTo = tiptapCore.minMax(mappedFrom + currentFragmentSize, 0, maxDocSize) // was 'S'
+                )
+                const mappedTo = tiptapCore.minMax(mappedFrom + currentFragmentSize, 0, maxDocSize)
 
-                if (mappedFrom === 1 && !isFirstChildText) {
-                  // Ensure block nodes can be inserted at doc start
+                if (
+                  mappedFrom === 1 &&
+                  !isFirstChildText &&
+                  editor.state.doc.nodeAt(0)?.type.name === 'doc'
+                ) {
                   mappedFrom = 0
                 }
 
-                let newRange = {from: mappedFrom, to: mappedTo} // was 'b'
+                let newRange = {from: mappedFrom, to: mappedTo}
 
                 chain = chain.command(({tr}) => {
+                  const sliceDepth = respondInline
+                    ? Math.min(
+                        tr.doc.resolve(mappedFrom).depth,
+                        getFragmentContentDepth(fragmentToInsert, true),
+                      )
+                    : 0
                   tr.replaceRange(
                     mappedFrom,
                     mappedTo,
-                    new prosemirrorModel.Slice(
-                      fragmentToInsert,
-                      respondInline
-                        ? Math.min(
-                            tr.doc.resolve(mappedFrom).depth,
-                            getFragmentContentDepth(fragmentToInsert, true),
-                          )
-                        : 0,
-                      0,
-                    ),
+                    new prosemirrorModel.Slice(fragmentToInsert, sliceDepth, 0),
                   )
                   const lastStep = tr.steps[tr.steps.length - 1]
                   if (
@@ -1218,16 +1206,13 @@ const StreamContentExtension = tiptapCore.Extension.create({
               await streamHandlerFn({
                 write: streamControls.write,
                 getWritableStream() {
-                  // For direct pipeTo scenarios
                   const textDecoder = new TextDecoder('utf-8')
                   return new WritableStream({
-                    write: (
-                      chunkValue, // was 'n' (param)
-                    ) =>
-                      new Promise(resolve => {
-                        const decodedChunk = textDecoder.decode(chunkValue, {stream: true}) // was 'i'
+                    write: chunkValue =>
+                      new Promise(resolveWrite => {
+                        const decodedChunk = textDecoder.decode(chunkValue, {stream: true})
                         streamControls.write({partial: decodedChunk})
-                        resolve()
+                        resolveWrite()
                       }),
                     close() {
                       streamControls.cleanup()
@@ -1236,7 +1221,7 @@ const StreamContentExtension = tiptapCore.Extension.create({
                 },
               })
             } finally {
-              streamControls.cleanup()
+              streamControls.cleanup() // Ensure cleanup happens
             }
           })()
           return true
@@ -1249,10 +1234,10 @@ const AiExtension = tiptapCore.Extension.create({
   name: 'ai',
   addStorage: () => ({
     pastResponses: [],
-    state: 'idle', // 'loading', 'error', 'idle'
+    state: 'idle',
     response: undefined,
     error: undefined,
-    generatedWith: undefined, // { options, action, range }
+    generatedWith: undefined,
   }),
 
   addOptions: () => ({
@@ -1262,44 +1247,43 @@ const AiExtension = tiptapCore.Extension.create({
     autocompletion: false,
     autocompletionOptions: {
       inputLength: 4000,
-      trigger: 'Tab', // Or other key like space, or a specific sequence
-      // modelName: undefined, // Optional model override
-      // checkTrigger: (view, event) => boolean, // Custom logic to determine if autocompletion should trigger
-      // accept: 'Tab', // Key to accept the suggestion
-      // debounce: 0, // Debounce time in ms for triggering autocompletion
+      trigger: 'Tab',
+      modelName: undefined,
+      checkTrigger: undefined,
+      accept: undefined, // Will default to trigger or "Tab"
+      debounce: 0,
     },
-    append: false, // Default behavior for AI commands (e.g. complete)
-    collapseToEnd: true, // Default behavior after insertion
+    append: false,
+    collapseToEnd: true,
     aiStreamResolver: resolveAiStreamRequest,
     aiCompletionResolver: resolveAiCompletionRequest,
     aiImageResolver: resolveAiImageRequest,
     onLoading: () => null,
     onSuccess: () => null,
     onError: () => null,
-    // showDecorations: true, // For aiMark during streaming
+    showDecorations: true,
   }),
 
   addExtensions: () => [AiMark.configure(), StreamContentExtension.configure()],
 
   addProseMirrorPlugins() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k // For nullish coalescing on autocompletionOptions
-    const plugins = [] // was 'p'
+    const plugins = []
 
     if (this.editor.options.injectCSS) {
       tiptapCore.createStyleTag(
         `
-                .tiptap-ai-suggestion {
-                  cursor: pointer;
-                  pointer-events: none; /* So text below can be selected */
+                .tiptap-ai-suggestion { /* Applied to the node decoration */
+                  /* position: relative; */ /* If needed for complex ::after styling */
                 }
-
                 .tiptap-ai-suggestion::after {
-                  color: #6B7280; /* gray-500 */
                   content: attr(data-suggestion);
-                  pointer-events: none;
+                  color: #6B7280; /* Tailwind gray-500 */
+                  pointer-events: none; /* Allows interaction with text underneath */
+                  /* white-space: pre-wrap; */ /* If suggestions can have newlines */
                 }
-
-                /* Fix for extra line breaks in suggestions */
+                .tiptap-ai-prompt { /* Applied to inline decoration for the prompt text */
+                  /* Optional styling for the prompt itself, e.g., background */
+                }
                 .tiptap-ai-suggestion br:first-child,
                 .tiptap-ai-suggestion br:last-child {
                   content: ' ';
@@ -1307,46 +1291,35 @@ const AiExtension = tiptapCore.Extension.create({
                 }
                 `,
         this.editor.options.injectNonce,
-        'ai',
+        'ai', // CSS group key
       )
     }
 
     if (this.options.autocompletion) {
-      const autocompletionOptions = this.options.autocompletionOptions // was 'e'
+      const extOptions = this.options // Alias for extension options
+      const acOptions = extOptions.autocompletionOptions || {} // Ensure autocompletionOptions exists
+
+      const finalAcceptKey =
+        acOptions.accept !== null && acOptions.accept !== undefined
+          ? acOptions.accept
+          : acOptions.trigger !== null && acOptions.trigger !== undefined
+            ? acOptions.trigger
+            : 'Tab'
+
       plugins.push(
         AiAutocompletionPlugin({
           editor: this.editor,
           options: {
-            appId: this.options.appId,
-            token: this.options.token,
-            baseUrl: this.options.baseUrl || AI_DEFAULT_BASE_URL,
-            inputLength:
-              ((_a = autocompletionOptions) === null || _a === void 0 ? void 0 : _a.inputLength) ||
-              4000, // was 'e' -> autocompletionOptions
-            modelName:
-              (_b = autocompletionOptions) === null || _b === void 0 ? void 0 : _b.modelName, // was 'n'
-            trigger:
-              ((_c = autocompletionOptions) === null || _c === void 0 ? void 0 : _c.trigger) ||
-              'Tab', // was 'o'
-            checkTrigger:
-              (_d = autocompletionOptions) === null || _d === void 0 ? void 0 : _d.checkTrigger, // was 'i'
-            accept:
-              (_h =
-                (_g =
-                  (_f = autocompletionOptions) === null || _f === void 0 ? void 0 : _f.accept) !==
-                  null && _g !== void 0
-                  ? _g
-                  : (_e = autocompletionOptions) === null || _e === void 0
-                    ? void 0
-                    : _e.trigger) !== null && _h !== void 0
-                ? _h
-                : 'Tab', // was 'l', 'r', 'a', 's'
-            debounce:
-              (_k =
-                (_j = autocompletionOptions) === null || _j === void 0 ? void 0 : _j.debounce) !==
-                null && _k !== void 0
-                ? _k
-                : 0, // was 'd', 'c'
+            // Pass resolved options to the plugin
+            appId: extOptions.appId,
+            token: extOptions.token,
+            baseUrl: extOptions.baseUrl || AI_DEFAULT_BASE_URL,
+            inputLength: acOptions.inputLength || 4000,
+            modelName: acOptions.modelName,
+            trigger: acOptions.trigger || 'Tab',
+            checkTrigger: acOptions.checkTrigger,
+            accept: finalAcceptKey,
+            debounce: acOptions.debounce || 0,
           },
         }),
       )
@@ -1423,33 +1396,41 @@ const AiExtension = tiptapCore.Extension.create({
     aiImagePrompt:
       (imagePromptOptions = {}) =>
       cmdProps => {
-        // cmdProps was 'e', imagePromptOptions was 't'
-        const {editor, state: editorState} = cmdProps // editor was 'o', editorState was 'i'
+        const {editor, state: editorState} = cmdProps
         const aiExtensionInstance = editor.extensionManager.extensions.find(
-          // was 'a'
           ext => ext.name === 'ai' || ext.name === 'aiAdvanced',
         )
+        if (!aiExtensionInstance) {
+          console.error('[tiptap-ai] AI extension not found for image prompt.')
+          return false
+        }
+
         const {
           selection: {from, to},
-        } = editorState // 'r', 's'
-        const textForImage =
-          (imagePromptOptions === null || imagePromptOptions === void 0
+        } = editorState
+        const textFromOptions =
+          imagePromptOptions === null || imagePromptOptions === void 0
             ? void 0
-            : imagePromptOptions.text) !== null && imagePromptOptions.text !== undefined // 'n'
-            ? imagePromptOptions.text
-            : editorState.doc.textBetween(from, to, ' ') // 'l'
+            : imagePromptOptions.text
+        const textForImage =
+          textFromOptions !== null && textFromOptions !== undefined
+            ? textFromOptions
+            : editorState.doc.textBetween(from, to, ' ')
 
-        const imageExtension = editor.extensionManager.extensions.find(ext => ext.name === 'image') // 'c'
+        const imageExtension = editor.extensionManager.extensions.find(ext => ext.name === 'image')
 
-        if (!textForImage || !aiExtensionInstance) return false
+        if (!textForImage && !imagePromptOptions.text) {
+          // No text provided or selected
+          console.warn('[tiptap-ai] No text provided for image prompt.')
+          return false
+        }
         if (!imageExtension) {
-          throw new Error('[tiptap-ai] Image extension is not loaded.')
+          throw new Error('[tiptap-ai] Image extension is not loaded, cannot run aiImagePrompt.')
         }
 
         aiImageCommand({
           props: cmdProps,
-          // text: textForImage, // text is part of imageOptions now
-          imageOptions: imagePromptOptions,
+          imageOptions: imagePromptOptions, // Contains text if provided
           extensionOptions: aiExtensionInstance.options,
           fetchDataFn: aiExtensionInstance.options.aiImageResolver,
         })()
@@ -1459,34 +1440,39 @@ const AiExtension = tiptapCore.Extension.create({
     aiAccept:
       ({insertAt, append} = {}) =>
       ({dispatch, editor, chain}) => {
-        var _a, _b, _c
         const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
-        const {from, to} =
+
+        const generatedWithData =
+          aiStorage === null || aiStorage === void 0 ? void 0 : aiStorage.generatedWith
+        const generatedWithOptions =
+          generatedWithData === null || generatedWithData === void 0
+            ? void 0
+            : generatedWithData.options
+        const generatedWithRange =
+          generatedWithData === null || generatedWithData === void 0
+            ? void 0
+            : generatedWithData.range
+
+        const {from: selectionFrom, to: selectionTo} =
           typeof insertAt === 'number'
             ? {from: insertAt, to: insertAt}
             : insertAt || editor.state.selection
 
-        const effectiveAppend = // 'p'
-          append !== null && append !== undefined
-            ? append
-            : typeof insertAt === 'number' ||
-              ((_b =
-                (_a =
-                  aiStorage === null || aiStorage === void 0 ? void 0 : aiStorage.generatedWith) ===
-                  null || _a === void 0
-                  ? void 0
-                  : _a.options) === null || _b === void 0
-                ? void 0
-                : _b.append)
+        let effectiveAppend = append
+        if (effectiveAppend === null || effectiveAppend === undefined) {
+          effectiveAppend =
+            typeof insertAt === 'number'
+              ? false
+              : generatedWithOptions
+                ? generatedWithOptions.append
+                : false
+        }
 
         if (
           aiStorage.state === 'loading' ||
           aiStorage.state === 'error' ||
           aiStorage.response === undefined ||
-          ((_c = aiStorage === null || aiStorage === void 0 ? void 0 : aiStorage.generatedWith) ===
-            null || _c === void 0
-            ? void 0
-            : _c.range) // Already inserted
+          generatedWithRange // If range exists, it implies content was already inserted by stream/completion command
         ) {
           return false
         }
@@ -1494,20 +1480,25 @@ const AiExtension = tiptapCore.Extension.create({
         if (dispatch) {
           const {response: responseText} = aiStorage
           Object.assign(aiStorage, {
+            // Reset state before insertion
             state: 'idle',
-            response: undefined,
+            response: undefined, // Clear response as it's being inserted
             error: undefined,
-            generatedWith: undefined,
+            generatedWith: undefined, // Clear generatedWith as we are accepting it
           })
-          aiStorage.pastResponses = [] // Clear history on accept
+          aiStorage.pastResponses = []
 
           chain()
-            .setMeta('aiResponse', aiStorage)
+            .setMeta('aiResponse', {...aiStorage}) // Pass a copy of the reset storage
             .focus()
-            .insertContentAt(effectiveAppend ? to : {from, to}, responseText, {
-              parseOptions: {preserveWhitespace: false},
-              errorOnInvalidContent: false,
-            })
+            .insertContentAt(
+              effectiveAppend ? selectionTo : {from: selectionFrom, to: selectionTo},
+              responseText,
+              {
+                parseOptions: {preserveWhitespace: false},
+                errorOnInvalidContent: false, // Be lenient with pasted HTML-like content
+              },
+            )
             .run()
         }
         return true
@@ -1516,17 +1507,25 @@ const AiExtension = tiptapCore.Extension.create({
     aiReject:
       ({type = 'reset'} = {}) =>
       ({dispatch, editor, chain}) => {
-        var _a
         const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
-        if (
-          aiStorage.state === 'error' ||
-          aiStorage.response === undefined ||
-          ((_a = aiStorage === null || aiStorage === void 0 ? void 0 : aiStorage.generatedWith) ===
-            null || _a === void 0
+        const generatedWithData =
+          aiStorage === null || aiStorage === void 0 ? void 0 : aiStorage.generatedWith
+        const generatedWithRange =
+          generatedWithData === null || generatedWithData === void 0
             ? void 0
-            : _a.range) // Already inserted
+            : generatedWithData.range
+
+        if (
+          aiStorage.state === 'error' || // Allow rejecting error state
+          aiStorage.response === undefined ||
+          generatedWithRange // If already inserted, reject shouldn't do much unless it's a reset
         ) {
-          return false
+          if (type === 'reset' && generatedWithRange) {
+            // If it was inserted and we reset, it's up to user to delete content
+            // This command only resets the AI state
+          } else {
+            return false
+          }
         }
 
         if (dispatch) {
@@ -1539,9 +1538,12 @@ const AiExtension = tiptapCore.Extension.create({
             })
             aiStorage.pastResponses = []
           } else if (type === 'pause') {
-            Object.assign(aiStorage, {state: 'idle'}) // Keeps response for potential future accept
+            // Keep response, set state to idle
+            Object.assign(aiStorage, {state: 'idle'})
           }
-          chain().setMeta('aiResponse', aiStorage).run()
+          chain()
+            .setMeta('aiResponse', {...aiStorage})
+            .run() // Pass a copy
         }
         return true
       },
@@ -1553,26 +1555,46 @@ const AiExtension = tiptapCore.Extension.create({
         const aiStorage = editor.storage.ai || editor.storage.aiAdvanced
 
         if (aiStorage.pastResponses.length === 0 || !aiStorage.generatedWith) {
-          return false
+          return false // Nothing to regenerate from
         }
-        // If insert is true, but we don't have a range or a specific insertAt point, it's problematic.
-        if (insert && !aiStorage.generatedWith.range && insertAt === undefined) {
-          return false
+
+        const originalGeneratedWith = aiStorage.generatedWith
+        const originalAction = originalGeneratedWith.action
+        let optionsForRegeneration = {...originalGeneratedWith.options} // Copy original options
+
+        // Determine if the regenerated content should be inserted and where
+        const shouldInsert =
+          insert !== undefined ? insert : originalGeneratedWith.range !== undefined
+        let newInsertAt = insertAt
+        if (shouldInsert && newInsertAt === undefined && originalGeneratedWith.range) {
+          newInsertAt = originalGeneratedWith.range // Use previous insertion range
+        }
+
+        if (shouldInsert) {
+          optionsForRegeneration.insert = true
+          if (newInsertAt !== undefined) {
+            optionsForRegeneration.insertAt = newInsertAt
+          } else {
+            // Cannot insert without a specific range/position
+            console.warn(
+              '[tiptap-ai] Cannot regenerate with insert: true without a range or insertAt position.',
+            )
+            return false
+          }
+        } else {
+          // If not inserting, ensure these are not carried over
+          delete optionsForRegeneration.insert
+          delete optionsForRegeneration.insertAt
         }
 
         if (dispatch) {
-          let optionsForRegeneration = aiStorage.generatedWith.options
-          if (insert || (insert === undefined && aiStorage.generatedWith.range)) {
-            optionsForRegeneration = {
-              ...optionsForRegeneration,
-              insert: true,
-              insertAt:
-                insertAt !== null && insertAt !== undefined
-                  ? insertAt
-                  : aiStorage.generatedWith.range,
-            }
-          }
-          return dispatchAiTextAction(props, aiStorage.generatedWith.action, optionsForRegeneration)
+          // Clear previous response from immediate storage before new call, but keep pastResponses for history
+          Object.assign(aiStorage, {
+            response: undefined,
+            error: undefined,
+            // Keep generatedWith for a moment for the dispatchAiTextAction to use, it will be overwritten
+          })
+          return dispatchAiTextAction(props, originalAction, optionsForRegeneration)
         }
         return false
       },
@@ -1593,18 +1615,21 @@ exports.resolveAiCompletion = resolveAiCompletionRequest
 exports.resolveAiImage = resolveAiImageRequest
 exports.resolveAiStream = resolveAiStreamRequest
 exports.tryParseToTiptapHTML = function (content, editorContext) {
-  // editorContext was 'n'
   try {
-    let node = tiptapCore.createNodeFromContent(content, editorContext.schema, {
-      parseOptions: {preserveWhitespace: false},
+    let nodeOrFragment = tiptapCore.createNodeFromContent(content, editorContext.schema, {
+      parseOptions: {preserveWhitespace: 'full'}, // Changed to "full"
     })
-    // If createNodeFromContent returns a Doc node, get its content
-    if ('nodeSize' in node && node.type.name === 'doc') {
-      // Check if it's a full document node
-      node = node.content
+    // createNodeFromContent can return a Node (e.g. doc) or a Fragment
+    // getHTMLFromFragment expects a Fragment. If it's a Doc node, use its content.
+    if (
+      nodeOrFragment instanceof prosemirrorModel.Node &&
+      nodeOrFragment.type.name === editorContext.schema.topNodeType.name
+    ) {
+      nodeOrFragment = nodeOrFragment.content
     }
-    return tiptapCore.getHTMLFromFragment(node, editorContext.schema)
+    return tiptapCore.getHTMLFromFragment(nodeOrFragment, editorContext.schema)
   } catch (error) {
-    return null
+    console.error('Error in tryParseToTiptapHTML:', error)
+    return null // Return null on error as per original logic
   }
 }
