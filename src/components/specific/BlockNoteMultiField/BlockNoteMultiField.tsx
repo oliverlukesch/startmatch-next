@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {memo, useEffect, useMemo, useState} from 'react'
 
 import {
   BlockNoteEditor,
@@ -16,6 +16,7 @@ import {BlockNoteView} from '@blocknote/mantine'
 import '@blocknote/mantine/style.css'
 import {useCreateBlockNote} from '@blocknote/react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
+import {Editor} from '@tiptap/core'
 import * as Y from 'yjs'
 
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
@@ -121,7 +122,7 @@ interface EditorFieldProps {
   setActiveField: (params: {fieldName: string; editor: BlockNoteEditor}) => void
 }
 
-const EditorField = ({
+const EditorField = memo(function EditorField({
   fieldName,
   provider,
   threadStore,
@@ -129,7 +130,7 @@ const EditorField = ({
   yDoc,
   isProviderSynced,
   setActiveField,
-}: EditorFieldProps) => {
+}: EditorFieldProps) {
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
     return getOrCreateSubFragment(yDoc, fieldName)
@@ -172,17 +173,18 @@ const EditorField = ({
       data-theming-blocknote-multifield
     />
   )
-}
+})
 
 // MAIN COMPONENT
 
 export default function CollabEditor({appId, document, user, className}: EditorProps) {
   const [isProviderSynced, setIsProviderSynced] = useState(false)
   const [, setHasChanges] = useState(false)
-  const [, setActiveField] = useState<{
+  const [activeField, setActiveField] = useState<{
     fieldName: string
     editor: BlockNoteEditor
   } | null>(null)
+  const [, setActiveTipTapEditor] = useState<Editor | null>(null)
 
   const [sidebarTab, setSidebarTab] = useState<TabContent>(TabContent.Comments)
   const [commentFilter, setCommentFilter] = useState<CommentFilterStatus>(CommentFilterStatus.Open)
@@ -226,6 +228,15 @@ export default function CollabEditor({appId, document, user, className}: EditorP
       yDoc.off('update', onUpdate)
     }
   }, [yDoc, provider])
+
+  // note: does not have exactly the same capabilities as the normal tip tap editor
+  useEffect(() => {
+    if (activeField?.editor._tiptapEditor.can) {
+      setActiveTipTapEditor(activeField.editor._tiptapEditor as unknown as Editor)
+    } else {
+      setActiveTipTapEditor(null)
+    }
+  }, [activeField])
 
   return (
     <div className={cn(`flex h-full flex-row overflow-hidden rounded-xl border`, className)}>
