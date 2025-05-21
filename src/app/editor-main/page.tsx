@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {TipTapMultiField} from '@/components/specific/TipTapMultiField'
+import {CollabEditor} from '@/components/specific/BlockNoteMultiField'
 
 export default function App() {
   const userName = `user_${Math.round(Math.random() * 1000)}`
@@ -14,7 +14,7 @@ export default function App() {
 
   return (
     <div className="flex max-h-screen flex-1 p-4">
-      <TipTapMultiField
+      <CollabEditor
         appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
         document={document}
         user={{

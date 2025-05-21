@@ -2,4 +2,4 @@
 
 import dynamic from 'next/dynamic'
 
-export const TipTapMultiField = dynamic(() => import('./TipTapMultiField'), {ssr: false})
+export const CollabEditor = dynamic(() => import('./TipTapMultiField'), {ssr: false})
