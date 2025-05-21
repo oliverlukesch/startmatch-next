@@ -5,12 +5,12 @@ import CollabEditor from '@/components/specific/TipTapWithCommentsTs'
 export default function App() {
   const userName = `comment_user_${Math.round(Math.random() * 1000)}`
   const userData = {sub: userName}
-  const userToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_APP_SECRET || '')
+  const userToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_DOC_SECRET || '')
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <CollabEditor
-        appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
+        appId={process.env.TIPTAP_CLOUD_DEV_DOC_APP_ID || ''}
         documentName="dev.comments.document5"
         user={{
           name: userName,

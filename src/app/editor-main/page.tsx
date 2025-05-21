@@ -1,11 +1,13 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {CollabEditor} from '@/components/specific/BlockNoteMultiField'
+import {CollabEditor} from '@/components/specific/TipTapMultiField'
 
 export default function App() {
   const userName = `user_${Math.round(Math.random() * 1000)}`
   const userData = {sub: userName}
-  const userToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_APP_SECRET || '')
+
+  const docToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_DOC_SECRET || '')
+  const aiToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_AI_SECRET || '')
 
   const document = {
     name: 'dev.document8',
@@ -15,12 +17,14 @@ export default function App() {
   return (
     <div className="flex max-h-screen flex-1 p-4">
       <CollabEditor
-        appId={process.env.TIPTAP_CLOUD_DEV_APP_ID || ''}
+        docAppId={process.env.TIPTAP_CLOUD_DEV_DOC_APP_ID || ''}
+        aiAppId={process.env.TIPTAP_CLOUD_DEV_AI_APP_ID || ''}
         document={document}
         user={{
           name: userName,
           color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-          token: userToken,
+          docToken,
+          aiToken,
         }}
         className="flex-1"
       />

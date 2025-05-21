@@ -3,6 +3,8 @@
 import {memo, useEffect, useMemo} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
+import Ai from '@tiptap-pro/extension-ai'
+import AiChanges from '@tiptap-pro/extension-ai-changes'
 import CollaborationHistory, {
   CollabOnUpdateProps,
 } from '@tiptap-pro/extension-collaboration-history'
@@ -13,10 +15,18 @@ import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import * as Y from 'yjs'
 
+import {Button} from '@/components/ui/button'
+
 export interface EditorFieldProps {
   fieldName: string
   provider: TiptapCollabProvider
-  user: {name: string; color: string}
+  aiAppId: string
+  user: {
+    name: string
+    color: string
+    docToken: string
+    aiToken: string
+  }
   yDoc: Y.Doc
   isProviderSynced: boolean
   setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
@@ -44,6 +54,7 @@ function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {
 export const EditorField = memo(function EditorField({
   fieldName,
   provider,
+  aiAppId,
   user,
   yDoc,
   isProviderSynced,
@@ -63,9 +74,22 @@ export const EditorField = memo(function EditorField({
 
   const editor = useEditor(
     {
+      // editable: false,
       extensions: [
         StarterKit.configure({
           history: false,
+        }),
+        Ai.configure({
+          appId: aiAppId,
+          token: user.aiToken,
+          autocompletion: false, // does not appear to be working, therefore disabled
+          // showDecorations: false, // not helping...
+        }),
+        AiChanges.configure({
+          // optional according to the documentation but that's a lie
+          getCustomDecorations({getDefaultDecorations}) {
+            return getDefaultDecorations()
+          },
         }),
         ...(subFragment
           ? [
@@ -88,7 +112,7 @@ export const EditorField = memo(function EditorField({
       ],
       // helps with SSR
       immediatelyRender: false,
-      // default in V3, might increase performance
+      // false is default in V3, might increase performance
       shouldRerenderOnTransaction: false,
       onFocus: () => {
         setActiveField({fieldName, editor})
@@ -102,5 +126,36 @@ export const EditorField = memo(function EditorField({
     if (isPrimary) setPrimaryEditor(editor)
   }, [editor, isPrimary, setPrimaryEditor])
 
-  return <EditorContent editor={editor} className="editor-field" />
+  return (
+    editor && (
+      <>
+        <div className="flex gap-4">
+          <Button onClick={() => editor.commands.startTrackingAiChanges()}>Start tracking</Button>
+          <Button onClick={() => editor.commands.acceptAllAiChanges()}>Accept all</Button>
+          <Button onClick={() => editor.commands.rejectAllAiChanges()}>Reject all</Button>
+          <Button onClick={() => editor.commands.stopTrackingAiChanges()}>Stop tracking</Button>
+
+          <Button
+            onClick={() =>
+              editor.chain().focus().aiShorten({stream: false, format: 'rich-text'}).run()
+            }>
+            Shorten
+          </Button>
+
+          <Button
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .aiComplete({append: true, stream: false, format: 'rich-text'})
+                .run()
+            }>
+            Continue
+          </Button>
+        </div>
+
+        <EditorContent editor={editor} className="editor-field" />
+      </>
+    )
+  )
 })

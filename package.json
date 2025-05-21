@@ -27,6 +27,8 @@
     "@radix-ui/react-slot": "^1.2.2",
     "@radix-ui/react-tabs": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.6",
+    "@tiptap-pro/extension-ai": "^2.19.1",
+    "@tiptap-pro/extension-ai-changes": "2.18.0-beta.14",
     "@tiptap-pro/extension-collaboration-history": "^2.15.2",
     "@tiptap-pro/extension-comments": "^2.19.1",
     "@tiptap/extension-collaboration": "^2.12.0",

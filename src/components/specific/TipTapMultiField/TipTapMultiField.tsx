@@ -19,7 +19,8 @@ import {EditorToolbar} from './EditorToolbar'
 import './style.css'
 
 export interface EditorProps {
-  appId: string
+  docAppId: string
+  aiAppId: string
   document: {
     name: string
     fields: string[]
@@ -27,14 +28,15 @@ export interface EditorProps {
   user: {
     name: string
     color: string
-    token: string
+    docToken: string
+    aiToken: string
   }
   className?: string
 }
 
 // TODO: take another stab at render performance, see here:
 // https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
-export default function CollabEditor({document, user, appId, className}: EditorProps) {
+export default function CollabEditor({document, user, docAppId, aiAppId, className}: EditorProps) {
   // leave for debugging
   // console.log('render CollabEditor')
 
@@ -56,14 +58,14 @@ export default function CollabEditor({document, user, appId, className}: EditorP
     const yDoc = new Y.Doc()
 
     const provider = new TiptapCollabProvider({
-      appId: appId,
+      appId: docAppId,
       name: document.name,
-      token: user.token,
+      token: user.docToken,
       document: yDoc,
     })
 
     return [yDoc, provider]
-  }, [document, user, appId])
+  }, [document, user, docAppId])
 
   const onPrimaryHistoryUpdate = useCallback((data: CollabOnUpdateProps) => {
     setVersions(data.versions)
@@ -98,23 +100,27 @@ export default function CollabEditor({document, user, appId, className}: EditorP
         <EditorToolbar editor={selection?.editor || null} />
 
         <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
-          {document.fields.map((fieldName, index) => (
-            <div className="flex flex-col gap-2" key={fieldName}>
-              <h4 className="text-md font-semibold text-muted-foreground uppercase">{fieldName}</h4>
-              <EditorField
-                fieldName={fieldName}
-                provider={provider}
-                user={user}
-                yDoc={yDoc}
-                isProviderSynced={isProviderSynced}
-                setActiveField={setActiveField}
-                isPrimary={index === 0}
-                setPrimaryEditor={setPrimaryEditor}
-                onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
-                onSelectionUpdate={onSelectionUpdate}
-              />
-            </div>
-          ))}
+          {isProviderSynced &&
+            document.fields.map((fieldName, index) => (
+              <div className="flex flex-col gap-2" key={fieldName}>
+                <h4 className="text-md font-semibold text-muted-foreground uppercase">
+                  {fieldName}
+                </h4>
+                <EditorField
+                  fieldName={fieldName}
+                  provider={provider}
+                  aiAppId={aiAppId}
+                  user={user}
+                  yDoc={yDoc}
+                  isProviderSynced={isProviderSynced}
+                  setActiveField={setActiveField}
+                  isPrimary={index === 0}
+                  setPrimaryEditor={setPrimaryEditor}
+                  onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
+                  onSelectionUpdate={onSelectionUpdate}
+                />
+              </div>
+            ))}
         </div>
 
         <div className="flex shrink-0 gap-4 border-t px-4 py-2">
