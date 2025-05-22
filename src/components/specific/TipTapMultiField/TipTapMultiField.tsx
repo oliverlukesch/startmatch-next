@@ -17,6 +17,7 @@ import {cn} from '@/lib/utils'
 import {EditorField} from './EditorField'
 import {EditorToolbar} from './EditorToolbar'
 import './style.css'
+import {safeYjsMapGet, safeYjsMapSet} from './utils'
 
 export interface EditorProps {
   docAppId: string
@@ -43,39 +44,22 @@ const docSettingsKeys = {
   isAiEditing: 'isAiEditing',
 }
 
-// YJS library is wrongly typed, this is a workaround
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function safeYjsMapGet<T>(map: Y.Map<any>, key: string): T {
-  return map.get(key) as T
-}
-
-// YJS library is wrongly typed, this is a workaround
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function safeYjsMapSet(map: Y.Map<any>, key: string, value: any) {
-  map.set(key, value)
-}
-
-// TODO: take another stab at render performance, see here:
-// https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
 export default function CollabEditor({document, user, docAppId, aiAppId, className}: EditorProps) {
   // leave for debugging
-  // console.log('render CollabEditor')
+  console.log('render CollabEditor')
 
-  const [isAiEditing, setIsAiEditing] = useState(false)
+  // document / YJS related actions triggered through the primary editor also
+  // apply to the other editors (e.g. create version, revert version, etc.)
+  const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
+  const [activeField, setActiveField] = useState<{name: string; editor: Editor | null} | null>(null)
+  const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
 
   const [isProviderSynced, setIsProviderSynced] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isAiEditing, setIsAiEditing] = useState(false)
 
   const [versions, setVersions] = useState<CollabHistoryVersion[]>([])
   const [currentVersion, setCurrentVersion] = useState<number | undefined>()
-
-  // document / YJS related actions on the primary editor also apply to the
-  // other editors (e.g. create version, revert version, etc.)
-  const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
-  const [activeField, setActiveField] = useState<{fieldName: string; editor: Editor | null} | null>(
-    null,
-  )
-  const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
 
   const [yDoc, provider] = useMemo(() => {
     const yDoc = new Y.Doc()
@@ -173,6 +157,7 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
             ))}
         </div>
 
+        {/* TODO: extract into stand-alone + memoed component */}
         <div className="flex shrink-0 gap-4 border-t px-4 py-2">
           <span className="text-muted-foreground">
             Current User: <span className="font-semibold text-foreground">{user.name}</span>
@@ -181,14 +166,14 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
           <span className="text-muted-foreground">
             Active Field:{' '}
             <span className="font-semibold text-foreground uppercase">
-              {activeField?.fieldName || 'None'}
+              {activeField?.name || 'None'}
             </span>
           </span>
         </div>
       </div>
 
       {/* SIDEBAR */}
-      {/* TODO: decouple into stand-alone + memoed component */}
+      {/* TODO: extract into stand-alone + memoed component */}
       <div className="flex w-80 shrink-0 flex-col gap-4 overflow-scroll border-l bg-slate-50 p-4">
         <Button
           disabled={!hasChanges}

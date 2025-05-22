@@ -17,6 +17,8 @@ import * as Y from 'yjs'
 
 import {Button} from '@/components/ui/button'
 
+import {getOrCreateSubXmlFragment} from './utils'
+
 export interface EditorFieldProps {
   fieldName: string
   provider: TiptapCollabProvider
@@ -29,7 +31,7 @@ export interface EditorFieldProps {
   }
   yDoc: Y.Doc
   isProviderSynced: boolean
-  setActiveField: (params: {fieldName: string; editor: Editor | null}) => void
+  setActiveField: (params: {name: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
   // required as CollaborationHistory only works inside the editor context
@@ -39,18 +41,8 @@ export interface EditorFieldProps {
   onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
 }
 
-function getOrCreateSubFragment(doc: Y.Doc, name: string): Y.XmlFragment {
-  const defaultMap = doc.getMap('default')
-  let subFragment = defaultMap.get(name) as Y.XmlFragment
-
-  if (!subFragment || !(subFragment instanceof Y.XmlFragment)) {
-    subFragment = new Y.XmlFragment()
-    defaultMap.set(name, subFragment)
-  }
-
-  return subFragment
-}
-
+// TODO: take another stab at render performance, see here:
+// https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
 export const EditorField = memo(function EditorField({
   fieldName,
   provider,
@@ -65,11 +57,11 @@ export const EditorField = memo(function EditorField({
   onSelectionUpdate,
 }: EditorFieldProps) {
   // leave for debugging
-  // console.log('render EditorFieldProps', fieldName)
+  console.log('render EditorField', fieldName)
 
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
-    return getOrCreateSubFragment(yDoc, fieldName)
+    return getOrCreateSubXmlFragment(yDoc, fieldName)
   }, [fieldName, yDoc, isProviderSynced])
 
   const editor = useEditor(
@@ -82,8 +74,8 @@ export const EditorField = memo(function EditorField({
         Ai.configure({
           appId: aiAppId,
           token: user.aiToken,
-          autocompletion: false, // does not appear to be working, therefore disabled
-          // showDecorations: false, // not helping...
+          // does not appear to be working, therefore disabled
+          autocompletion: false,
         }),
         AiChanges.configure({
           // optional according to the documentation but that's a lie
@@ -115,7 +107,7 @@ export const EditorField = memo(function EditorField({
       // false is default in V3, might increase performance
       shouldRerenderOnTransaction: false,
       onFocus: () => {
-        setActiveField({fieldName, editor})
+        setActiveField({name: fieldName, editor})
       },
       onSelectionUpdate,
     },
