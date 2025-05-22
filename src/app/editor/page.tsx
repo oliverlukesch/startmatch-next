@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {CollabEditor} from '@/components/specific/TipTapMultiField'
+import {CollabEditor} from '@/components/specific/TipTapMultiSection'
 
 export default function App() {
   const userName = `user_${Math.round(Math.random() * 1000)}`
@@ -11,7 +11,7 @@ export default function App() {
 
   const document = {
     name: 'dev.document8',
-    fields: Array.from({length: 20}, (_, i) => `section-${i + 1}`),
+    sections: Array.from({length: 20}, (_, i) => `section-${i + 1}`),
   }
 
   return (

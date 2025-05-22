@@ -19,8 +19,8 @@ import {Button} from '@/components/ui/button'
 
 import {getOrCreateSubXmlFragment} from './utils'
 
-export interface EditorFieldProps {
-  fieldName: string
+export interface EditorSectionProps {
+  sectionName: string
   provider: TiptapCollabProvider
   aiAppId: string
   user: {
@@ -31,7 +31,7 @@ export interface EditorFieldProps {
   }
   yDoc: Y.Doc
   isProviderSynced: boolean
-  setActiveField: (params: {name: string; editor: Editor | null}) => void
+  setActiveSection: (params: {name: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
   // required as CollaborationHistory only works inside the editor context
@@ -43,26 +43,26 @@ export interface EditorFieldProps {
 
 // TODO: take another stab at render performance, see here:
 // https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
-export const EditorField = memo(function EditorField({
-  fieldName,
+export const EditorSection = memo(function EditorSection({
+  sectionName,
   provider,
   aiAppId,
   user,
   yDoc,
   isProviderSynced,
-  setActiveField,
+  setActiveSection,
   isPrimary,
   setPrimaryEditor,
   onPrimaryHistoryUpdate,
   onSelectionUpdate,
-}: EditorFieldProps) {
+}: EditorSectionProps) {
   // leave for debugging
-  console.log('render EditorField', fieldName)
+  console.log('render EditorSection', sectionName)
 
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
-    return getOrCreateSubXmlFragment(yDoc, fieldName)
-  }, [fieldName, yDoc, isProviderSynced])
+    return getOrCreateSubXmlFragment(yDoc, sectionName)
+  }, [sectionName, yDoc, isProviderSynced])
 
   const editor = useEditor(
     {
@@ -107,11 +107,11 @@ export const EditorField = memo(function EditorField({
       // false is default in V3, might increase performance
       shouldRerenderOnTransaction: false,
       onFocus: () => {
-        setActiveField({name: fieldName, editor})
+        setActiveSection({name: sectionName, editor})
       },
       onSelectionUpdate,
     },
-    [fieldName, provider, user, subFragment],
+    [sectionName, provider, user, subFragment],
   )
 
   useEffect(() => {
@@ -152,7 +152,7 @@ export const EditorField = memo(function EditorField({
           </Button>
         </div>
 
-        <EditorContent editor={editor} className="editor-field" />
+        <EditorContent editor={editor} className="editor-section" />
       </>
     )
   )

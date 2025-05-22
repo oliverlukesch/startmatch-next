@@ -14,7 +14,7 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {EditorField} from './EditorField'
+import {EditorSection} from './EditorSection'
 import {EditorToolbar} from './EditorToolbar'
 import './style.css'
 import {safeYjsMapGet, safeYjsMapSet} from './utils'
@@ -24,7 +24,7 @@ export interface EditorProps {
   aiAppId: string
   document: {
     name: string
-    fields: string[]
+    sections: string[]
   }
   user: {
     name: string
@@ -51,7 +51,9 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
   // document / YJS related actions triggered through the primary editor also
   // apply to the other editors (e.g. create version, revert version, etc.)
   const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
-  const [activeField, setActiveField] = useState<{name: string; editor: Editor | null} | null>(null)
+  const [activeSection, setActiveSection] = useState<{name: string; editor: Editor | null} | null>(
+    null,
+  )
   const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
 
   const [isProviderSynced, setIsProviderSynced] = useState(false)
@@ -117,7 +119,7 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
 
   return (
     <div className={cn('flex overflow-hidden rounded-xl border', className)}>
-      {/* EDITOR FIELDS */}
+      {/* EDITOR SECTIONS */}
       <div className="flex flex-1 flex-col">
         {/* passing the editor through the selection ensures that the correct buttons are highlighted */}
         <EditorToolbar editor={selection?.editor || null} />
@@ -135,19 +137,19 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
 
         <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
           {isProviderSynced &&
-            document.fields.map((fieldName, index) => (
-              <div className="flex flex-col gap-2" key={fieldName}>
+            document.sections.map((sectionName, index) => (
+              <div className="flex flex-col gap-2" key={sectionName}>
                 <h4 className="text-md font-semibold text-muted-foreground uppercase">
-                  {fieldName}
+                  {sectionName}
                 </h4>
-                <EditorField
-                  fieldName={fieldName}
+                <EditorSection
+                  sectionName={sectionName}
                   provider={provider}
                   aiAppId={aiAppId}
                   user={user}
                   yDoc={yDoc}
                   isProviderSynced={isProviderSynced}
-                  setActiveField={setActiveField}
+                  setActiveSection={setActiveSection}
                   isPrimary={index === 0}
                   setPrimaryEditor={setPrimaryEditor}
                   onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
@@ -164,9 +166,9 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
           </span>
 
           <span className="text-muted-foreground">
-            Active Field:{' '}
+            Active Section:{' '}
             <span className="font-semibold text-foreground uppercase">
-              {activeField?.name || 'None'}
+              {activeSection?.name || 'None'}
             </span>
           </span>
         </div>
