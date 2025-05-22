@@ -37,6 +37,14 @@ export function setLockInfo(
     ? docSettingsKeys.sections(sectionName)[lockType]
     : docSettingsKeys.doc[lockType]
 
+  console.log('Setting lock info:', {
+    lockType,
+    active,
+    user,
+    sectionName,
+    keys,
+  })
+
   safeYjsMapSet(docSettings, keys.active, active)
   if (active) {
     safeYjsMapSet(docSettings, keys.userId, user.userId)
@@ -90,11 +98,20 @@ export function isEditable(
   const docUserLock = getLockInfo(docSettings, 'userLock')
   const docAiEdit = getLockInfo(docSettings, 'aiEdit')
 
-  if (docUserLock.active && docUserLock.userId !== currentUserId) {
+  console.log('isEditable check:', {
+    sectionName,
+    currentUserId,
+    docUserLock,
+    docAiEdit,
+  })
+
+  if (docUserLock.active) {
+    console.log('Document locked by another user')
     return false
   }
 
   if (docAiEdit.active) {
+    console.log('AI is editing document')
     return false
   }
 
@@ -103,11 +120,18 @@ export function isEditable(
     const sectionUserLock = getLockInfo(docSettings, 'userLock', sectionName)
     const sectionAiEdit = getLockInfo(docSettings, 'aiEdit', sectionName)
 
-    if (sectionUserLock.active && sectionUserLock.userId !== currentUserId) {
+    console.log('Section locks:', {
+      sectionUserLock,
+      sectionAiEdit,
+    })
+
+    if (sectionUserLock.active) {
+      console.log('Section locked by another user')
       return false
     }
 
     if (sectionAiEdit.active) {
+      console.log('AI is editing section')
       return false
     }
   }

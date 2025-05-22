@@ -20,7 +20,7 @@ import {Button} from '@/components/ui/button'
 import {cn} from '@/lib/utils'
 
 import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './settingsHelpers'
-import {DocSettings, LockInfo} from './types'
+import {DocSettings, LockInfo, docSettingsKeys} from './types'
 import {getOrCreateSubXmlFragment} from './utils'
 
 export interface EditorSectionProps {
@@ -35,7 +35,6 @@ export interface EditorSectionProps {
     aiToken: string
   }
   yDoc: Y.Doc
-  docSettings: Y.Map<DocSettings> | undefined
   isProviderSynced: boolean
   setActiveSection: (params: {name: string; editor: Editor | null}) => void
   isPrimary: boolean
@@ -55,7 +54,6 @@ export const EditorSection = memo(function EditorSection({
   aiAppId,
   user,
   yDoc,
-  docSettings,
   isProviderSynced,
   setActiveSection,
   isPrimary,
@@ -70,21 +68,63 @@ export const EditorSection = memo(function EditorSection({
   const [sectionAiEdit, setSectionAiEdit] = useState<LockInfo>({active: false})
   const [editable, setEditable] = useState(true)
 
+  // get docSettings from yDoc
+  const docSettings = useMemo(() => {
+    if (!isProviderSynced) return undefined
+    return yDoc.getMap<DocSettings>(docSettingsKeys.mapName)
+  }, [yDoc, isProviderSynced])
+
   // observe settings changes
   useEffect(() => {
     if (!docSettings) return
 
     const updateLockStates = () => {
-      setSectionUserLock(getLockInfo(docSettings, 'userLock', sectionName))
-      setSectionAiEdit(getLockInfo(docSettings, 'aiEdit', sectionName))
-      setEditable(isEditable(docSettings, user.id, sectionName))
+      const newSectionUserLock = getLockInfo(docSettings, 'userLock', sectionName)
+      const newSectionAiEdit = getLockInfo(docSettings, 'aiEdit', sectionName)
+      const newEditable = isEditable(docSettings, user.id, sectionName)
+
+      console.log(`Lock states for ${sectionName}:`, {
+        sectionUserLock: newSectionUserLock,
+        sectionAiEdit: newSectionAiEdit,
+        editable: newEditable,
+        userId: user.id,
+      })
+
+      setSectionUserLock(newSectionUserLock)
+      setSectionAiEdit(newSectionAiEdit)
+      setEditable(newEditable)
     }
 
     // initial update
     updateLockStates()
 
     // observe changes
-    const observer = () => updateLockStates()
+    const observer = (event: Y.YMapEvent<DocSettings>) => {
+      const relevantKeys = [
+        // document-level keys
+        docSettingsKeys.doc.userLock.active,
+        docSettingsKeys.doc.userLock.userId,
+        docSettingsKeys.doc.userLock.userName,
+        docSettingsKeys.doc.userLock.timestamp,
+        docSettingsKeys.doc.aiEdit.active,
+        docSettingsKeys.doc.aiEdit.userId,
+        docSettingsKeys.doc.aiEdit.userName,
+        docSettingsKeys.doc.aiEdit.timestamp,
+        // section-level keys
+        ...Object.values(docSettingsKeys.sections(sectionName).userLock),
+        ...Object.values(docSettingsKeys.sections(sectionName).aiEdit),
+      ]
+
+      // check if any relevant key was changed
+      const hasRelevantChange = Array.from(event.keysChanged).some(key =>
+        relevantKeys.includes(key),
+      )
+
+      if (hasRelevantChange) {
+        console.log('Relevant docSettings changed for section:', sectionName, event.keysChanged)
+        updateLockStates()
+      }
+    }
     docSettings.observe(observer)
 
     return () => {
@@ -99,7 +139,6 @@ export const EditorSection = memo(function EditorSection({
 
   const editor = useEditor(
     {
-      editable,
       extensions: [
         StarterKit.configure({
           history: false,
@@ -144,7 +183,7 @@ export const EditorSection = memo(function EditorSection({
       },
       onSelectionUpdate,
     },
-    [sectionName, provider, user, subFragment, editable],
+    [sectionName, provider, user, subFragment],
   )
 
   useEffect(() => {
@@ -153,10 +192,11 @@ export const EditorSection = memo(function EditorSection({
 
   // update editor editable state when it changes
   useEffect(() => {
-    if (editor && editor.isEditable !== editable) {
+    if (editor) {
+      console.log(`Setting editable for ${sectionName}:`, editable, 'current:', editor.isEditable)
       editor.setEditable(editable)
     }
-  }, [editor, editable])
+  }, [editor, editable, sectionName])
 
   return (
     editor && (
@@ -259,7 +299,7 @@ export const EditorSection = memo(function EditorSection({
 
         <EditorContent
           editor={editor}
-          className={cn('editor-section', !editable && 'pointer-events-none opacity-50')}
+          className={cn('editor-section', !editable && 'cursor-not-allowed opacity-60')}
         />
       </>
     )

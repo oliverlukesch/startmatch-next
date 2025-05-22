@@ -105,10 +105,24 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
     setDocAiEdit(getLockInfo(docSettings, 'aiEdit'))
 
     // observe changes
-    docSettings.observe(() => {
-      setDocUserLock(getLockInfo(docSettings, 'userLock'))
-      setDocAiEdit(getLockInfo(docSettings, 'aiEdit'))
-    })
+    const observer = (event: Y.YMapEvent<DocSettings>) => {
+      const docLevelKeys = [
+        ...Object.values(docSettingsKeys.doc.userLock),
+        ...Object.values(docSettingsKeys.doc.aiEdit),
+      ]
+
+      // check if any document-level key was changed
+      const hasDocLevelChange = Array.from(event.keysChanged).some(key =>
+        docLevelKeys.includes(key),
+      )
+
+      if (hasDocLevelChange) {
+        console.log('Document-level settings changed:', event.keysChanged)
+        setDocUserLock(getLockInfo(docSettings, 'userLock'))
+        setDocAiEdit(getLockInfo(docSettings, 'aiEdit'))
+      }
+    }
+    docSettings.observe(observer)
 
     return docSettings
   }, [yDoc, isProviderSynced])
@@ -185,7 +199,6 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
                   aiAppId={aiAppId}
                   user={user}
                   yDoc={yDoc}
-                  docSettings={docSettings}
                   isProviderSynced={isProviderSynced}
                   setActiveSection={setActiveSection}
                   isPrimary={index === 0}
