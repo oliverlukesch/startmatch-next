@@ -3,8 +3,9 @@ import jsonwebtoken from 'jsonwebtoken'
 import {CollabEditor} from '@/components/specific/TipTapMultiSection'
 
 export default function App() {
-  const userName = `user_${Math.round(Math.random() * 1000)}`
-  const userData = {sub: userName}
+  const userId = `user_${Math.round(Math.random() * 1000)}`
+  const userName = `User ${userId.split('_')[1]}`
+  const userData = {sub: userId}
 
   const docToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_DOC_SECRET || '')
   const aiToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_AI_SECRET || '')
@@ -21,6 +22,7 @@ export default function App() {
         aiAppId={process.env.TIPTAP_CLOUD_DEV_AI_APP_ID || ''}
         document={document}
         user={{
+          id: userId,
           name: userName,
           color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
           docToken,
