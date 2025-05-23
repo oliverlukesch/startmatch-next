@@ -15,6 +15,7 @@ export interface DocSettings {
   'doc.aiEdit.userId'?: string
   'doc.aiEdit.userName'?: string
   'doc.aiEdit.timestamp'?: string
+
   // section-level settings are dynamic and added with pattern:
   // 'sections.[sectionName].userLock.active': boolean
   // 'sections.[sectionName].userLock.userId': string

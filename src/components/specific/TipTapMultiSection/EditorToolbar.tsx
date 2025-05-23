@@ -58,7 +58,7 @@ const ToolbarButton = ({
 
 export const EditorToolbar = memo(function EditorToolbar({editor, className}: EditorToolbarProps) {
   // leave for debugging
-  console.log('render EditorToolbar')
+  // console.log('render EditorToolbar')
 
   return (
     <TooltipProvider delayDuration={0}>

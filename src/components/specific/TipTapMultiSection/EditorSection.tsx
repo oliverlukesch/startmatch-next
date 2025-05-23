@@ -62,62 +62,40 @@ export const EditorSection = memo(function EditorSection({
   onSelectionUpdate,
 }: EditorSectionProps) {
   // leave for debugging
-  console.log('render EditorSection', sectionName)
+  // console.log('render EditorSection', sectionName)
 
   const [sectionUserLock, setSectionUserLock] = useState<LockInfo>({active: false})
   const [sectionAiEdit, setSectionAiEdit] = useState<LockInfo>({active: false})
   const [editable, setEditable] = useState(true)
 
-  // get docSettings from yDoc
   const docSettings = useMemo(() => {
     if (!isProviderSynced) return undefined
     return yDoc.getMap<DocSettings>(docSettingsKeys.mapName)
   }, [yDoc, isProviderSynced])
 
-  // observe settings changes
   useEffect(() => {
     if (!docSettings) return
 
     const updateLockStates = () => {
-      const newSectionUserLock = getLockInfo(docSettings, 'userLock', sectionName)
-      const newSectionAiEdit = getLockInfo(docSettings, 'aiEdit', sectionName)
-      const newEditable = isEditable(docSettings, user.id, sectionName)
-
-      console.log(`Lock states for ${sectionName}:`, {
-        sectionUserLock: newSectionUserLock,
-        sectionAiEdit: newSectionAiEdit,
-        editable: newEditable,
-        userId: user.id,
-      })
-
-      setSectionUserLock(newSectionUserLock)
-      setSectionAiEdit(newSectionAiEdit)
-      setEditable(newEditable)
+      setSectionUserLock(getLockInfo(docSettings, 'userLock', sectionName))
+      setSectionAiEdit(getLockInfo(docSettings, 'aiEdit', sectionName))
+      setEditable(isEditable(docSettings, sectionName))
     }
 
-    // initial update
     updateLockStates()
 
-    // observe changes
-    const observer = (event: Y.YMapEvent<DocSettings>) => {
-      const relevantKeys = [
+    function onDocSettingsUpdate(event: Y.YMapEvent<DocSettings>) {
+      const observedKeys = [
         // document-level keys
-        docSettingsKeys.doc.userLock.active,
-        docSettingsKeys.doc.userLock.userId,
-        docSettingsKeys.doc.userLock.userName,
-        docSettingsKeys.doc.userLock.timestamp,
-        docSettingsKeys.doc.aiEdit.active,
-        docSettingsKeys.doc.aiEdit.userId,
-        docSettingsKeys.doc.aiEdit.userName,
-        docSettingsKeys.doc.aiEdit.timestamp,
+        ...Object.values(docSettingsKeys.doc.userLock),
+        ...Object.values(docSettingsKeys.doc.aiEdit),
         // section-level keys
         ...Object.values(docSettingsKeys.sections(sectionName).userLock),
         ...Object.values(docSettingsKeys.sections(sectionName).aiEdit),
       ]
 
-      // check if any relevant key was changed
       const hasRelevantChange = Array.from(event.keysChanged).some(key =>
-        relevantKeys.includes(key),
+        observedKeys.includes(key),
       )
 
       if (hasRelevantChange) {
@@ -125,10 +103,11 @@ export const EditorSection = memo(function EditorSection({
         updateLockStates()
       }
     }
-    docSettings.observe(observer)
+
+    docSettings.observe(onDocSettingsUpdate)
 
     return () => {
-      docSettings.unobserve(observer)
+      docSettings.unobserve(onDocSettingsUpdate)
     }
   }, [docSettings, sectionName, user.id])
 

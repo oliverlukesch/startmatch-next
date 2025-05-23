@@ -39,7 +39,7 @@ export interface EditorProps {
 
 export default function CollabEditor({document, user, docAppId, aiAppId, className}: EditorProps) {
   // leave for debugging
-  console.log('render CollabEditor')
+  // console.log('render CollabEditor')
 
   // document / YJS related actions triggered through the primary editor also
   // apply to the other editors (e.g. create version, revert version, etc.)
@@ -77,12 +77,12 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
 
   useEffect(() => {
     const onUpdate = () => {
-      console.log('Document updated')
+      // console.log('Document updated')
       setHasChanges(true)
     }
 
     const onSynced = () => {
-      console.log('Provider synced')
+      // console.log('Provider synced')
       setIsProviderSynced(true)
       yDoc.on('update', onUpdate)
     }
