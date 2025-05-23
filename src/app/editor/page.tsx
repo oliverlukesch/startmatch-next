@@ -11,7 +11,7 @@ export default function App() {
   const aiToken = jsonwebtoken.sign(userData, process.env.TIPTAP_CLOUD_DEV_AI_SECRET || '')
 
   const document = {
-    name: 'dev.document8',
+    name: 'dev.document9',
     sections: Array.from({length: 20}, (_, i) => `section-${i + 1}`),
   }
 

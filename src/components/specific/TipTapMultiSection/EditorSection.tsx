@@ -207,6 +207,7 @@ export const EditorSection = memo(function EditorSection({
             }}>
             {sectionUserLock.active ? 'Unlock' : 'Lock'}
           </Button>
+
           <Button
             size="sm"
             variant={sectionAiEdit.active ? 'destructive' : 'outline'}
@@ -232,36 +233,12 @@ export const EditorSection = memo(function EditorSection({
         </div>
 
         {/* AI TRACKING CONTROLS */}
-        <div className="flex gap-4">
+        {/* <div className="flex gap-4">
           <Button onClick={() => editor.commands.startTrackingAiChanges()}>Start tracking</Button>
           <Button onClick={() => editor.commands.acceptAllAiChanges()}>Accept all</Button>
           <Button onClick={() => editor.commands.rejectAllAiChanges()}>Reject all</Button>
           <Button onClick={() => editor.commands.stopTrackingAiChanges()}>Stop tracking</Button>
-
-          <Button
-            onClick={() =>
-              editor
-                .chain()
-                .focus()
-                // startsInline helps with fixing TipTap collaboration-related issues
-                .aiShorten({stream: true, format: 'rich-text', startsInline: true})
-                .run()
-            }>
-            Shorten
-          </Button>
-
-          <Button
-            onClick={() =>
-              editor
-                .chain()
-                .focus()
-                // startsInline helps with fixing TipTap collaboration-related issues
-                .aiComplete({append: true, stream: true, format: 'rich-text', startsInline: true})
-                .run()
-            }>
-            Continue
-          </Button>
-        </div>
+        </div> */}
 
         <EditorContent
           editor={editor}
