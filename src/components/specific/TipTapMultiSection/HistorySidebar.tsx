@@ -87,6 +87,9 @@ export const HistorySidebar = memo(function HistorySidebar({
             variant="outline"
             size="sm"
             disabled={!primaryEditor}
+            // TODO: there current is an issue with reverting - it happens on
+            // the server but does not appear in the editor until a refresh.
+            // needs to be investigated (but not a priority)
             onClick={() => {
               if (!primaryEditor) return
               primaryEditor.commands.revertToVersion(version.version)
