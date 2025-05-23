@@ -1,12 +1,8 @@
 'use client'
 
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
-import {
-  CollabHistoryVersion,
-  CollabOnUpdateProps,
-} from '@tiptap-pro/extension-collaboration-history'
 import {Editor, EditorEvents} from '@tiptap/core'
 import * as Y from 'yjs'
 
@@ -16,7 +12,8 @@ import {cn} from '@/lib/utils'
 
 import {EditorSection} from './EditorSection'
 import {EditorToolbar} from './EditorToolbar'
-import {canActivateLock, getLockInfo, setLockInfo} from './docConfigHelpers'
+import {HistorySidebar} from './HistorySidebar'
+import {canActivateLock, getLockInfo, setLockInfo} from './helpers/docConfigHelpers'
 import './style.css'
 import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
 
@@ -50,12 +47,8 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
   const [selection, onSelectionUpdate] = useState<EditorEvents['selectionUpdate'] | null>(null)
 
   const [isProviderSynced, setIsProviderSynced] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
   const [docUserLock, setDocUserLock] = useState<LockInfo>({active: false})
   const [docAiEdit, setDocAiEdit] = useState<LockInfo>({active: false})
-
-  const [versions, setVersions] = useState<CollabHistoryVersion[]>([])
-  const [currentVersion, setCurrentVersion] = useState<number | undefined>()
 
   const [yDoc, provider] = useMemo(() => {
     const yDoc = new Y.Doc()
@@ -75,31 +68,19 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
     return yDoc.getMap<DocConfig>(docConfigKeys.mapName)
   }, [yDoc, isProviderSynced])
 
-  const onPrimaryHistoryUpdate = useCallback((data: CollabOnUpdateProps) => {
-    setVersions(data.versions)
-    setCurrentVersion(data.currentVersion)
-  }, [])
-
   // watch doc
   useEffect(() => {
-    const onUpdate = () => {
-      // console.log('Document updated')
-      setHasChanges(true)
-    }
-
     const onSynced = () => {
       // console.log('Provider synced')
       setIsProviderSynced(true)
-      yDoc.on('update', onUpdate)
     }
 
     provider.on('synced', onSynced)
 
     return () => {
       provider.off('synced', onSynced)
-      yDoc.off('update', onUpdate)
     }
-  }, [yDoc, provider])
+  }, [provider])
 
   // watch doc config
   useEffect(() => {
@@ -210,14 +191,12 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
                   setActiveSection={setActiveSection}
                   isPrimary={index === 0}
                   setPrimaryEditor={setPrimaryEditor}
-                  onPrimaryHistoryUpdate={onPrimaryHistoryUpdate}
                   onSelectionUpdate={onSelectionUpdate}
                 />
               </div>
             ))}
         </div>
 
-        {/* TODO: extract into stand-alone + memoed component */}
         <div className="flex shrink-0 gap-4 border-t px-4 py-2">
           <span className="text-muted-foreground">
             Current User: <span className="font-semibold text-foreground">{user.name}</span>
@@ -232,40 +211,7 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
         </div>
       </div>
 
-      {/* SIDEBAR */}
-      {/* TODO: extract into stand-alone + memoed component */}
-      <div className="flex w-80 shrink-0 flex-col gap-4 overflow-scroll border-l bg-slate-50 p-4">
-        <Button
-          disabled={!hasChanges}
-          onClick={() => {
-            if (!primaryEditor) return
-            primaryEditor.commands.saveVersion(`version-${Date.now()}`)
-            setHasChanges(false)
-          }}>
-          Save version
-        </Button>
-
-        {currentVersion && (
-          <div className="text-center text-lg text-muted-foreground">
-            Current version: <span className="font-semibold text-foreground">{currentVersion}</span>
-          </div>
-        )}
-
-        {versions.map(version => (
-          <div key={version.version} className="flex items-center justify-between gap-2">
-            {version.version}: {version.name}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!primaryEditor) return
-                primaryEditor.commands.revertToVersion(version.version)
-              }}>
-              Revert
-            </Button>
-          </div>
-        ))}
-      </div>
+      <HistorySidebar yDoc={yDoc} primaryEditor={primaryEditor} />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import * as Y from 'yjs'
 
-import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
-import {safeYjsMapGet, safeYjsMapSet} from './utils'
+import {DocConfig, LockInfo, LockType, docConfigKeys} from '../types'
+import {safeYjsMapGet, safeYjsMapSet} from './yJsHelpers'
 
 export function getLockInfo(
   docConfig: Y.Map<DocConfig>,

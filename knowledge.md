@@ -16,7 +16,7 @@ A Next.js application for automated grants management.
 
 ### Code Quality
 
-- Keep things minimal
+- Keep things lean and minimal
   - Do not implement features that were not asked for, unless they are absolutely necessary to fulfill the request
   - Avoid DIV nesting, complex Tailwind styles and other unnecessary things
   - Less code is usually better
@@ -25,6 +25,8 @@ A Next.js application for automated grants management.
   - It executes the following command: `prettier . --check && next lint && tsc --noEmit`
 
 - Avoid magic strings, prefer config objects, key maps and Typescript enums
+
+- Only use try/catch when absolutely necessary
 
 ### Conventions
 

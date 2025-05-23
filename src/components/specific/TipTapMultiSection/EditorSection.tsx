@@ -5,9 +5,7 @@ import {memo, useEffect, useMemo, useState} from 'react'
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import Ai from '@tiptap-pro/extension-ai'
 import AiChanges from '@tiptap-pro/extension-ai-changes'
-import CollaborationHistory, {
-  CollabOnUpdateProps,
-} from '@tiptap-pro/extension-collaboration-history'
+import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
 import {Editor, EditorEvents} from '@tiptap/core'
 import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
@@ -19,9 +17,9 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './docConfigHelpers'
+import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './helpers/docConfigHelpers'
+import {getOrCreateSubXmlFragment} from './helpers/yJsHelpers'
 import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
-import {getOrCreateSubXmlFragment} from './utils'
 
 export interface EditorSectionProps {
   sectionName: string
@@ -39,8 +37,6 @@ export interface EditorSectionProps {
   setActiveSection: (params: {name: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
-  // required as CollaborationHistory only works inside the editor context
-  onPrimaryHistoryUpdate: (data: CollabOnUpdateProps) => void
   // required to trigger a re-render of the EditorToolbar when the selection
   // changes (which is required for highlighting the correct buttons)
   onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
@@ -58,7 +54,6 @@ export const EditorSection = memo(function EditorSection({
   setActiveSection,
   isPrimary,
   setPrimaryEditor,
-  onPrimaryHistoryUpdate,
   onSelectionUpdate,
 }: EditorSectionProps) {
   // leave for debugging
@@ -108,9 +103,6 @@ export const EditorSection = memo(function EditorSection({
               }),
               CollaborationHistory.configure({
                 provider,
-                onUpdate: data => {
-                  if (isPrimary) onPrimaryHistoryUpdate(data)
-                },
               }),
             ]
           : []),
