@@ -24,6 +24,8 @@ A Next.js application for automated grants management.
 - Use `pnpm lint` for checking the code quality after performing changes
   - It executes the following command: `prettier . --check && next lint && tsc --noEmit`
 
+- Avoid magic strings, prefer config objects, key maps and Typescript enums
+
 ### Conventions
 
 - React Server Components (RSC) enabled by default
@@ -43,7 +45,8 @@ A Next.js application for automated grants management.
 
 ### Comment Preferences
 
-- Use comments very sparsely, do not explain obvious logic
+- Use comments very sparsely
+- Do not explain obvious logic
 - Do not add a comment on top of every function definition / function call / class / logical block / etc.
 - Primarily use comments for explaining complex logic or providing context that cannot be inferred by reading the code alone
 - Break up longer code blocks with "headline comments" (like: `// FORM SUBMISSION RELATED` or `// TEXT GENERATION RELATED`)

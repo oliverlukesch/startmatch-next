@@ -1,11 +1,11 @@
 import * as Y from 'yjs'
 
-import {DocSettings, LockInfo, docSettingsKeys} from './types'
+import {DocSettings, LockInfo, LockType, docSettingsKeys} from './types'
 import {safeYjsMapGet, safeYjsMapSet} from './utils'
 
 export function getLockInfo(
   docSettings: Y.Map<DocSettings>,
-  lockType: 'userLock' | 'aiEdit',
+  lockType: LockType,
   sectionName?: string,
 ): LockInfo {
   const keys = sectionName
@@ -22,7 +22,7 @@ export function getLockInfo(
 
 export function setLockInfo(
   docSettings: Y.Map<DocSettings>,
-  lockType: 'userLock' | 'aiEdit',
+  lockType: LockType,
   active: boolean,
   user: {userId: string; name: string},
   sectionName?: string,
@@ -46,13 +46,13 @@ export function setLockInfo(
 
 export function canActivateLock(
   docSettings: Y.Map<DocSettings>,
-  lockType: 'userLock' | 'aiEdit',
+  lockType: LockType,
   sectionName?: string,
 ): boolean {
-  const oppositeLockType = lockType === 'userLock' ? 'aiEdit' : 'userLock'
+  const oppositeLockType = lockType === LockType.UserLock ? LockType.AiEdit : LockType.UserLock
 
-  const docUserLock = getLockInfo(docSettings, 'userLock')
-  const docAiEdit = getLockInfo(docSettings, 'aiEdit')
+  const docUserLock = getLockInfo(docSettings, LockType.UserLock)
+  const docAiEdit = getLockInfo(docSettings, LockType.AiEdit)
 
   if (docUserLock.active || docAiEdit.active) return false
 
@@ -65,13 +65,13 @@ export function canActivateLock(
 }
 
 export function isEditable(docSettings: Y.Map<DocSettings>, sectionName: string): boolean {
-  const docUserLock = getLockInfo(docSettings, 'userLock')
-  const docAiEdit = getLockInfo(docSettings, 'aiEdit')
+  const docUserLock = getLockInfo(docSettings, LockType.UserLock)
+  const docAiEdit = getLockInfo(docSettings, LockType.AiEdit)
 
   if (docUserLock.active || docAiEdit.active) return false
 
-  const sectionUserLock = getLockInfo(docSettings, 'userLock', sectionName)
-  const sectionAiEdit = getLockInfo(docSettings, 'aiEdit', sectionName)
+  const sectionUserLock = getLockInfo(docSettings, LockType.UserLock, sectionName)
+  const sectionAiEdit = getLockInfo(docSettings, LockType.AiEdit, sectionName)
 
   if (sectionUserLock.active || sectionAiEdit.active) return false
 

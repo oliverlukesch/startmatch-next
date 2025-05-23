@@ -1,3 +1,8 @@
+export enum LockType {
+  UserLock = 'userLock',
+  AiEdit = 'aiEdit',
+}
+
 export interface LockInfo {
   active: boolean
   userId?: string
