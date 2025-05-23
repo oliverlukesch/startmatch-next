@@ -19,8 +19,8 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './settingsHelpers'
-import {DocSettings, LockInfo, LockType, docSettingsKeys} from './types'
+import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './docConfigHelpers'
+import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
 import {getOrCreateSubXmlFragment} from './utils'
 
 export interface EditorSectionProps {
@@ -68,50 +68,15 @@ export const EditorSection = memo(function EditorSection({
   const [sectionAiEdit, setSectionAiEdit] = useState<LockInfo>({active: false})
   const [editable, setEditable] = useState(true)
 
-  const docSettings = useMemo(() => {
-    if (!isProviderSynced) return undefined
-    return yDoc.getMap<DocSettings>(docSettingsKeys.mapName)
-  }, [yDoc, isProviderSynced])
-
-  useEffect(() => {
-    if (!docSettings) return
-
-    const observedKeys = [
-      // document-level keys
-      ...Object.values(docSettingsKeys.doc.userLock),
-      ...Object.values(docSettingsKeys.doc.aiEdit),
-      // section-level keys
-      ...Object.values(docSettingsKeys.sections(sectionName).userLock),
-      ...Object.values(docSettingsKeys.sections(sectionName).aiEdit),
-    ]
-
-    const updateLockStates = () => {
-      setSectionUserLock(getLockInfo(docSettings, LockType.UserLock, sectionName))
-      setSectionAiEdit(getLockInfo(docSettings, LockType.AiEdit, sectionName))
-      setEditable(isEditable(docSettings, sectionName))
-    }
-
-    updateLockStates()
-
-    function onDocSettingsUpdate(event: Y.YMapEvent<DocSettings>) {
-      const hasRelevantChange = Array.from(event.keysChanged).some(key =>
-        observedKeys.includes(key),
-      )
-
-      if (hasRelevantChange) updateLockStates()
-    }
-
-    docSettings.observe(onDocSettingsUpdate)
-
-    return () => {
-      docSettings.unobserve(onDocSettingsUpdate)
-    }
-  }, [docSettings, sectionName, user.id])
-
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
     return getOrCreateSubXmlFragment(yDoc, sectionName)
   }, [sectionName, yDoc, isProviderSynced])
+
+  const docConfig = useMemo(() => {
+    if (!isProviderSynced) return undefined
+    return yDoc.getMap<DocConfig>(docConfigKeys.mapName)
+  }, [yDoc, isProviderSynced])
 
   const editor = useEditor(
     {
@@ -163,16 +128,48 @@ export const EditorSection = memo(function EditorSection({
   )
 
   useEffect(() => {
+    if (!docConfig) return
+
+    const observedKeys = [
+      // document-level keys
+      ...Object.values(docConfigKeys.doc.userLock),
+      ...Object.values(docConfigKeys.doc.aiEdit),
+      // section-level keys
+      ...Object.values(docConfigKeys.sections(sectionName).userLock),
+      ...Object.values(docConfigKeys.sections(sectionName).aiEdit),
+    ]
+
+    function updateLockStates() {
+      setSectionUserLock(getLockInfo(docConfig!, LockType.UserLock, sectionName))
+      setSectionAiEdit(getLockInfo(docConfig!, LockType.AiEdit, sectionName))
+      setEditable(isEditable(docConfig!, sectionName))
+    }
+
+    // initial update
+    updateLockStates()
+
+    function onDocConfigUpdate(event: Y.YMapEvent<DocConfig>) {
+      const hasRelevantChange = Array.from(event.keysChanged).some(key =>
+        observedKeys.includes(key),
+      )
+
+      if (hasRelevantChange) updateLockStates()
+    }
+
+    docConfig.observe(onDocConfigUpdate)
+
+    return () => {
+      docConfig.unobserve(onDocConfigUpdate)
+    }
+  }, [docConfig, sectionName])
+
+  useEffect(() => {
     if (isPrimary) setPrimaryEditor(editor)
   }, [editor, isPrimary, setPrimaryEditor])
 
-  // update editor editable state when it changes
   useEffect(() => {
-    if (editor) {
-      console.log(`Setting editable for ${sectionName}:`, editable, 'current:', editor.isEditable)
-      editor.setEditable(editable)
-    }
-  }, [editor, editable, sectionName])
+    if (editor) editor.setEditable(editable)
+  }, [editor, editable])
 
   return (
     editor && (
@@ -199,14 +196,14 @@ export const EditorSection = memo(function EditorSection({
             size="sm"
             variant={sectionUserLock.active ? 'destructive' : 'outline'}
             disabled={
-              !docSettings ||
+              !docConfig ||
               (!sectionUserLock.active &&
-                !canActivateLock(docSettings, LockType.UserLock, sectionName))
+                !canActivateLock(docConfig, LockType.UserLock, sectionName))
             }
             onClick={() => {
-              if (!docSettings) return
+              if (!docConfig) return
               setLockInfo(
-                docSettings,
+                docConfig,
                 LockType.UserLock,
                 !sectionUserLock.active,
                 {
@@ -222,13 +219,13 @@ export const EditorSection = memo(function EditorSection({
             size="sm"
             variant={sectionAiEdit.active ? 'destructive' : 'outline'}
             disabled={
-              !docSettings ||
-              (!sectionAiEdit.active && !canActivateLock(docSettings, LockType.AiEdit, sectionName))
+              !docConfig ||
+              (!sectionAiEdit.active && !canActivateLock(docConfig, LockType.AiEdit, sectionName))
             }
             onClick={() => {
-              if (!docSettings) return
+              if (!docConfig) return
               setLockInfo(
-                docSettings,
+                docConfig,
                 LockType.AiEdit,
                 !sectionAiEdit.active,
                 {

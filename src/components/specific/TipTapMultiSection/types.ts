@@ -10,8 +10,8 @@ export interface LockInfo {
   timestamp?: string
 }
 
-export interface DocSettings {
-  // document-level settings
+export interface DocConfig {
+  // document-level config
   'doc.userLock.active': boolean
   'doc.userLock.userId'?: string
   'doc.userLock.userName'?: string
@@ -21,15 +21,15 @@ export interface DocSettings {
   'doc.aiEdit.userName'?: string
   'doc.aiEdit.timestamp'?: string
 
-  // section-level settings are dynamic and added with pattern:
+  // section-level config are dynamic and added with pattern:
   // 'sections.[sectionName].userLock.active': boolean
   // 'sections.[sectionName].userLock.userId': string
   // etc...
   [key: string]: boolean | string | undefined
 }
 
-export const docSettingsKeys = {
-  mapName: '__sm__settings',
+export const docConfigKeys = {
+  mapName: '__startmatch__config',
   doc: {
     userLock: {
       active: 'doc.userLock.active',

@@ -43,6 +43,8 @@ A Next.js application for automated grants management.
 
 - When using internal React hooks, import them from the 'react' package, do not use `React.{hookName}`
 
+- Prefer `function functionName(params) {}` over `const functionName = (params) => {}` where meaningful
+
 ### Comment Preferences
 
 - Use comments very sparsely

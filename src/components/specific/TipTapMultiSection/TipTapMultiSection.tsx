@@ -16,9 +16,9 @@ import {cn} from '@/lib/utils'
 
 import {EditorSection} from './EditorSection'
 import {EditorToolbar} from './EditorToolbar'
-import {canActivateLock, getLockInfo, setLockInfo} from './settingsHelpers'
+import {canActivateLock, getLockInfo, setLockInfo} from './docConfigHelpers'
 import './style.css'
-import {DocSettings, LockInfo, LockType, docSettingsKeys} from './types'
+import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
 
 export interface EditorProps {
   docAppId: string
@@ -70,11 +70,17 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
     return [yDoc, provider]
   }, [document, user, docAppId])
 
+  const docConfig = useMemo(() => {
+    if (!isProviderSynced) return undefined
+    return yDoc.getMap<DocConfig>(docConfigKeys.mapName)
+  }, [yDoc, isProviderSynced])
+
   const onPrimaryHistoryUpdate = useCallback((data: CollabOnUpdateProps) => {
     setVersions(data.versions)
     setCurrentVersion(data.currentVersion)
   }, [])
 
+  // watch doc
   useEffect(() => {
     const onUpdate = () => {
       // console.log('Document updated')
@@ -95,37 +101,37 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
     }
   }, [yDoc, provider])
 
-  const docSettings = useMemo(() => {
-    if (!isProviderSynced) return
+  // watch doc config
+  useEffect(() => {
+    if (!docConfig) return
 
-    const docSettings = yDoc.getMap<DocSettings>(docSettingsKeys.mapName)
+    const observedKeys = [
+      ...Object.values(docConfigKeys.doc.userLock),
+      ...Object.values(docConfigKeys.doc.aiEdit),
+    ]
 
-    // initialize state from current values
-    setDocUserLock(getLockInfo(docSettings, LockType.UserLock))
-    setDocAiEdit(getLockInfo(docSettings, LockType.AiEdit))
+    function updateLockStates() {
+      setDocUserLock(getLockInfo(docConfig!, LockType.UserLock))
+      setDocAiEdit(getLockInfo(docConfig!, LockType.AiEdit))
+    }
 
-    // observe changes
-    const observer = (event: Y.YMapEvent<DocSettings>) => {
-      const docLevelKeys = [
-        ...Object.values(docSettingsKeys.doc.userLock),
-        ...Object.values(docSettingsKeys.doc.aiEdit),
-      ]
+    // initial update
+    updateLockStates()
 
-      // check if any document-level key was changed
-      const hasDocLevelChange = Array.from(event.keysChanged).some(key =>
-        docLevelKeys.includes(key),
+    function onDocConfigUpdate(event: Y.YMapEvent<DocConfig>) {
+      const hasRelevantChange = Array.from(event.keysChanged).some(key =>
+        observedKeys.includes(key),
       )
 
-      if (hasDocLevelChange) {
-        console.log('Document-level settings changed:', event.keysChanged)
-        setDocUserLock(getLockInfo(docSettings, LockType.UserLock))
-        setDocAiEdit(getLockInfo(docSettings, LockType.AiEdit))
-      }
+      if (hasRelevantChange) updateLockStates()
     }
-    docSettings.observe(observer)
 
-    return docSettings
-  }, [yDoc, isProviderSynced])
+    docConfig.observe(onDocConfigUpdate)
+
+    return () => {
+      docConfig.unobserve(onDocConfigUpdate)
+    }
+  }, [docConfig])
 
   return (
     <div className={cn('flex overflow-hidden rounded-xl border', className)}>
@@ -158,12 +164,12 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
             <Button
               variant={docUserLock.active ? 'destructive' : 'outline'}
               disabled={
-                !docSettings ||
-                (!docUserLock.active && !canActivateLock(docSettings, LockType.UserLock))
+                !docConfig ||
+                (!docUserLock.active && !canActivateLock(docConfig, LockType.UserLock))
               }
               onClick={() => {
-                if (!docSettings) return
-                setLockInfo(docSettings, LockType.UserLock, !docUserLock.active, {
+                if (!docConfig) return
+                setLockInfo(docConfig, LockType.UserLock, !docUserLock.active, {
                   userId: user.id,
                   name: user.name,
                 })
@@ -173,12 +179,11 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
             <Button
               variant={docAiEdit.active ? 'destructive' : 'outline'}
               disabled={
-                !docSettings ||
-                (!docAiEdit.active && !canActivateLock(docSettings, LockType.AiEdit))
+                !docConfig || (!docAiEdit.active && !canActivateLock(docConfig, LockType.AiEdit))
               }
               onClick={() => {
-                if (!docSettings) return
-                setLockInfo(docSettings, LockType.AiEdit, !docAiEdit.active, {
+                if (!docConfig) return
+                setLockInfo(docConfig, LockType.AiEdit, !docAiEdit.active, {
                   userId: user.id,
                   name: user.name,
                 })
