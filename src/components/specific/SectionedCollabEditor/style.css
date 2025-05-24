@@ -1,3 +1,5 @@
+@reference 'tailwindcss';
+
 :root {
   --white: #fff;
   --black: #2e2b29;
@@ -31,19 +33,33 @@
     margin-top: 0;
   }
 
-  /* List styles */
-  ul,
-  ol {
-    padding: 0 1rem;
-    margin: 1.25rem 1rem 1.25rem 0.4rem;
+  /* BASICS */
 
-    li p {
-      margin-top: 0.25em;
-      margin-bottom: 0.25em;
-    }
+  mark {
+    background-color: #faf594;
+    border-radius: 0.4rem;
+    box-decoration-break: clone;
+    padding: 0.1rem 0.3rem;
   }
 
-  /* Heading styles */
+  blockquote {
+    border-left: 3px solid var(--gray-3);
+    margin: 1.5rem 0;
+    padding-left: 1rem;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--gray-2);
+    margin: 2rem 0;
+  }
+
+  p {
+    word-break: break-all;
+  }
+
+  /* HEADINGS */
+
   h1,
   h2,
   h3,
@@ -79,52 +95,18 @@
     font-size: 1rem;
   }
 
-  /* Code and preformatted text styles */
-  code {
-    background-color: var(--purple-light);
-    border-radius: 0.4rem;
-    color: var(--black);
-    font-size: 0.85rem;
-    padding: 0.25em 0.3em;
-  }
+  /* LISTS */
 
-  pre {
-    background: var(--black);
-    border-radius: 0.5rem;
-    color: var(--white);
-    font-family: 'JetBrainsMono', monospace;
-    margin: 1.5rem 0;
-    padding: 0.75rem 1rem;
+  ul,
+  ol {
+    padding: 0 1rem;
+    margin: 1.25rem 1rem 1.25rem 0.4rem;
+    list-style-type: disc;
 
-    code {
-      background: none;
-      color: inherit;
-      font-size: 0.8rem;
-      padding: 0;
+    li p {
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
     }
-  }
-
-  mark {
-    background-color: #faf594;
-    border-radius: 0.4rem;
-    box-decoration-break: clone;
-    padding: 0.1rem 0.3rem;
-  }
-
-  blockquote {
-    border-left: 3px solid var(--gray-3);
-    margin: 1.5rem 0;
-    padding-left: 1rem;
-  }
-
-  hr {
-    border: none;
-    border-top: 1px solid var(--gray-2);
-    margin: 2rem 0;
-  }
-
-  p {
-    word-break: break-all;
   }
 
   /* COLLABORATION CURSOR */
@@ -169,4 +151,14 @@
     color: var(--color-green-700);
     background-color: var(--color-green-100);
   }
+}
+
+.text-menu-prompt-input:empty::before {
+  content: attr(data-placeholder);
+  @apply pointer-events-none block text-slate-600 italic;
+  @apply block; /* for firefox */
+}
+
+.text-menu-prompt-input:focus:empty::before {
+  @apply text-slate-300;
 }

@@ -2,7 +2,7 @@
 
 import {memo, useRef} from 'react'
 
-import {TextOptions} from '@tiptap-pro/extension-ai'
+import {Language, TextOptions, Tone} from '@tiptap-pro/extension-ai'
 import type {Editor} from '@tiptap/core'
 import {BubbleMenu} from '@tiptap/react'
 import {
@@ -15,8 +15,10 @@ import {
   Heading2,
   Heading3,
   Italic,
+  Languages,
   List,
   ListOrdered,
+  ListRestart,
   SpellCheck,
 } from 'lucide-react'
 
@@ -25,6 +27,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -47,7 +50,7 @@ const sharedTextOptions: TextOptions = {
   startsInline: true,
 }
 
-const supportedTones = [
+const supportedTones: Tone[] = [
   'informative',
   'academic',
   'persuasive',
@@ -56,6 +59,13 @@ const supportedTones = [
   'inspirational',
   'objective',
 ]
+
+const supportedLanguages = ['en', 'de']
+
+const languageKeys: Record<(typeof supportedLanguages)[number], string> = {
+  en: 'English',
+  de: 'German',
+}
 
 export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
   // using a ref instead of state to prevent re-renders
@@ -90,53 +100,101 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
               <Bot className="size-4" />
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="start" sideOffset={8} alignOffset={-4}>
-            <DropdownMenuItem
-              onClick={() => {
-                editor.chain().focus().aiShorten(sharedTextOptions).run()
-              }}>
-              <ChevronsDownUp />
-              Shorten
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                editor.chain().focus().aiExtend(sharedTextOptions).run()
-              }}>
-              <ChevronsUpDown />
-              Extend
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                editor.chain().focus().aiFixSpellingAndGrammar(sharedTextOptions).run()
-              }}>
-              <SpellCheck />
-              Correct
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                editor
-                  .chain()
-                  .focus()
-                  .aiComplete({append: true, ...sharedTextOptions})
-                  .run()
-              }}>
-              <ArrowRight />
-              Continue
-            </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Change Tone</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {supportedTones.map(tone => (
-                  <DropdownMenuItem
-                    key={tone}
-                    onClick={() => {
-                      editor.chain().focus().aiAdjustTone(tone, sharedTextOptions).run()
-                    }}>
-                    {tone.charAt(0).toUpperCase() + tone.slice(1)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            <div className="grid grid-cols-2 gap-2">
+              <DropdownMenuItem
+                onClick={() => {
+                  editor.chain().focus().aiShorten(sharedTextOptions).run()
+                }}>
+                <ChevronsDownUp />
+                Shorten
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  editor.chain().focus().aiExtend(sharedTextOptions).run()
+                }}>
+                <ChevronsUpDown />
+                Extend
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  editor.chain().focus().aiFixSpellingAndGrammar(sharedTextOptions).run()
+                }}>
+                <SpellCheck />
+                Correct
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  editor
+                    .chain()
+                    .focus()
+                    .aiComplete({append: true, ...sharedTextOptions})
+                    .run()
+                }}>
+                <ArrowRight />
+                Continue
+              </DropdownMenuItem>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Languages className="mr-2 size-4 text-slate-500" />
+                  Translate to
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {supportedLanguages.map(language => (
+                    <DropdownMenuItem
+                      key={language}
+                      onClick={() => {
+                        editor
+                          .chain()
+                          .focus()
+                          .aiTranslate(language as Language, sharedTextOptions)
+                          .run()
+                      }}>
+                      {languageKeys[language] || language.toUpperCase()}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ListRestart className="mr-2 size-4 text-slate-500" />
+                  Change tone
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {supportedTones.map(tone => (
+                    <DropdownMenuItem
+                      key={tone}
+                      onClick={() => {
+                        editor.chain().focus().aiAdjustTone(tone, sharedTextOptions).run()
+                      }}>
+                      {tone.charAt(0).toUpperCase() + tone.slice(1)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </div>
+
+            <DropdownMenuSeparator />
+
+            <div
+              contentEditable="plaintext-only"
+              className="text-menu-prompt-input m-1 mt-2 max-h-64 min-h-16 w-80 max-w-80 overflow-y-auto rounded p-2 outline-none focus:bg-slate-50 focus:ring-1 focus:ring-slate-300"
+              data-placeholder="Enter your prompt here..."
+              role="textbox"
+              tabIndex={0}
+              onKeyDown={event => {
+                event.stopPropagation()
+
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  const target = event.target as HTMLDivElement
+                  if (target) console.log(target.innerText)
+                }
+              }}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
 
