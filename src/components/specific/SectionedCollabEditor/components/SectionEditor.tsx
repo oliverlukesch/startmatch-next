@@ -11,13 +11,19 @@ import {Collaboration} from '@tiptap/extension-collaboration'
 import {CollaborationCursor} from '@tiptap/extension-collaboration-cursor'
 import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import {LoaderCircle} from 'lucide-react'
 import * as Y from 'yjs'
 
 import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {canActivateLock, getLockInfo, isEditable, setLockInfo} from '../helpers/docConfigHelpers'
+import {
+  getCanActivateLock,
+  getIsEditable,
+  getLockInfo,
+  setLockInfo,
+} from '../helpers/docConfigHelpers'
 import {getOrCreateSubXmlFragment} from '../helpers/yJsHelpers'
 import {DocConfig, LockInfo, LockType, docConfigKeys} from '../types'
 
@@ -61,7 +67,10 @@ export const SectionEditor = memo(function SectionEditor({
 
   const [sectionUserLock, setSectionUserLock] = useState<LockInfo>({active: false})
   const [sectionAiEdit, setSectionAiEdit] = useState<LockInfo>({active: false})
-  const [editable, setEditable] = useState(true)
+
+  const [isEditable, setIsEditable] = useState(true)
+  const [isAiEditing, setIsAiEditing] = useState(false)
+  const [hasAiChanges, setHasAiChanges] = useState(false)
 
   const subFragment = useMemo(() => {
     if (!isProviderSynced) return null
@@ -79,20 +88,38 @@ export const SectionEditor = memo(function SectionEditor({
         StarterKit.configure({
           history: false,
         }),
-        Ai.configure({
-          appId: aiAppId,
-          token: user.aiToken,
-          // does not appear to be working, therefore disabled
-          autocompletion: false,
-        }),
-        AiChanges.configure({
-          // optional according to the documentation but that's a lie
-          getCustomDecorations({getDefaultDecorations}) {
-            return getDefaultDecorations()
-          },
-        }),
+        // no need to configure the heavy extensions until the provider is
+        // synced and the subFragment is available
         ...(subFragment
           ? [
+              // ai extensions
+              Ai.configure({
+                appId: aiAppId,
+                token: user.aiToken,
+                // does not appear to be working, therefore disabled
+                autocompletion: false,
+                onLoading: () => {
+                  setIsAiEditing(true)
+                },
+                onSuccess: context => {
+                  setIsAiEditing(false)
+                  setHasAiChanges(context.editor.extensionStorage.aiChanges.getChanges().length > 0)
+                },
+                onError: (error, context) => {
+                  console.error(error)
+                  setIsAiEditing(false)
+                  context.editor.commands.stopTrackingAiChanges()
+                },
+              }),
+              // TODO: add AI suggestions
+              AiChanges.configure({
+                // optional according to the documentation but that's a lie
+                getCustomDecorations({getDefaultDecorations}) {
+                  return getDefaultDecorations()
+                },
+              }),
+
+              // collaboration extensions
               Collaboration.configure({
                 document: yDoc,
                 fragment: subFragment,
@@ -134,7 +161,7 @@ export const SectionEditor = memo(function SectionEditor({
     function updateLockStates() {
       setSectionUserLock(getLockInfo(docConfig!, LockType.UserLock, sectionName))
       setSectionAiEdit(getLockInfo(docConfig!, LockType.AiEdit, sectionName))
-      setEditable(isEditable(docConfig!, sectionName))
+      setIsEditable(getIsEditable(docConfig!, sectionName))
     }
 
     // initial update
@@ -160,37 +187,42 @@ export const SectionEditor = memo(function SectionEditor({
   }, [editor, isPrimary, setPrimaryEditor])
 
   useEffect(() => {
-    if (editor) editor.setEditable(editable)
-  }, [editor, editable])
+    if (editor) editor.setEditable(isEditable)
+  }, [editor, isEditable])
 
   return (
     editor && (
-      <>
-        {/* SECTION STATUS */}
-        {(sectionUserLock.active || sectionAiEdit.active) && (
-          <div
-            className={cn(
-              'mb-2 rounded p-2',
-              sectionUserLock.active ? 'bg-yellow-50' : 'bg-blue-50',
-            )}>
-            <p className="text-sm">
-              {sectionUserLock.active ? '🔒 Section locked' : '🤖 AI editing section'} by{' '}
+      <div className="flex flex-col gap-2 p-4">
+        <div className="flex items-center gap-2">
+          <h4 className="text-md inline font-semibold text-muted-foreground uppercase">
+            {sectionName}
+          </h4>
+
+          {isAiEditing && <LoaderCircle className="size-5 animate-spin" />}
+
+          {/* LOCK INFO */}
+          {(sectionUserLock.active || sectionAiEdit.active) && (
+            <div
+              className={cn(
+                'rounded px-1 py-0.5 text-sm',
+                sectionUserLock.active ? 'bg-yellow-200' : 'bg-blue-200',
+              )}>
+              {sectionUserLock.active ? '🔒 Section locked by ' : '🤖 AI edit triggered by '}
               <span className="font-semibold">
                 {sectionUserLock.active ? sectionUserLock.userName : sectionAiEdit.userName}
               </span>
-            </p>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {/* SECTION CONTROLS */}
-        <div className="mb-2 flex gap-2">
+        {/* CONTROLS */}
+        <div className="flex gap-2">
           <Button
-            size="sm"
             variant={sectionUserLock.active ? 'destructive' : 'outline'}
             disabled={
               !docConfig ||
               (!sectionUserLock.active &&
-                !canActivateLock(docConfig, LockType.UserLock, sectionName))
+                !getCanActivateLock(docConfig, LockType.UserLock, sectionName))
             }
             onClick={() => {
               if (!docConfig) return
@@ -209,11 +241,11 @@ export const SectionEditor = memo(function SectionEditor({
           </Button>
 
           <Button
-            size="sm"
             variant={sectionAiEdit.active ? 'destructive' : 'outline'}
             disabled={
               !docConfig ||
-              (!sectionAiEdit.active && !canActivateLock(docConfig, LockType.AiEdit, sectionName))
+              (!sectionAiEdit.active &&
+                !getCanActivateLock(docConfig, LockType.AiEdit, sectionName))
             }
             onClick={() => {
               if (!docConfig) return
@@ -230,21 +262,38 @@ export const SectionEditor = memo(function SectionEditor({
             }}>
             {sectionAiEdit.active ? 'Stop AI' : 'Start AI'}
           </Button>
-        </div>
 
-        {/* AI TRACKING CONTROLS */}
-        {/* <div className="flex gap-4">
-          <Button onClick={() => editor.commands.startTrackingAiChanges()}>Start tracking</Button>
-          <Button onClick={() => editor.commands.acceptAllAiChanges()}>Accept all</Button>
-          <Button onClick={() => editor.commands.rejectAllAiChanges()}>Reject all</Button>
-          <Button onClick={() => editor.commands.stopTrackingAiChanges()}>Stop tracking</Button>
-        </div> */}
+          {hasAiChanges && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  editor.chain().acceptAllAiChanges().stopTrackingAiChanges().run()
+                  setHasAiChanges(false)
+                }}>
+                Accept all
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  editor.chain().rejectAllAiChanges().stopTrackingAiChanges().run()
+                  setHasAiChanges(false)
+                }}>
+                Reject all
+              </Button>
+            </>
+          )}
+        </div>
 
         <EditorContent
           editor={editor}
-          className={cn('editor-section', !editable && 'cursor-not-allowed opacity-60')}
+          className={cn(
+            'rounded-lg bg-slate-50 p-4 focus-within:bg-amber-50',
+            !isEditable && 'cursor-not-allowed opacity-50 select-none',
+          )}
         />
-      </>
+      </div>
     )
   )
 })

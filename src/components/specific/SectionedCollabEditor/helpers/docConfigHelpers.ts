@@ -44,7 +44,7 @@ export function setLockInfo(
   }
 }
 
-export function canActivateLock(
+export function getCanActivateLock(
   docConfig: Y.Map<DocConfig>,
   lockType: LockType,
   sectionName?: string,
@@ -64,7 +64,7 @@ export function canActivateLock(
   return true
 }
 
-export function isEditable(docConfig: Y.Map<DocConfig>, sectionName: string): boolean {
+export function getIsEditable(docConfig: Y.Map<DocConfig>, sectionName: string): boolean {
   const docUserLock = getLockInfo(docConfig, LockType.UserLock)
   const docAiEdit = getLockInfo(docConfig, LockType.AiEdit)
 

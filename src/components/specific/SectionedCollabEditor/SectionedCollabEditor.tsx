@@ -13,7 +13,7 @@ import {cn} from '@/lib/utils'
 import {PrimaryToolbar} from './components/PrimaryToolbar'
 import {SectionEditor} from './components/SectionEditor'
 import {TextMenu} from './components/TextMenu'
-import {canActivateLock, getLockInfo, setLockInfo} from './helpers/docConfigHelpers'
+import {getCanActivateLock, getLockInfo, setLockInfo} from './helpers/docConfigHelpers'
 import './style.css'
 import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
 
@@ -148,12 +148,14 @@ export default function SectionedCollabEditor({
 
             {/* controls */}
             <div className="flex gap-4 p-4">
-              <Button onClick={() => console.log(yDoc.toJSON())}>Log doc</Button>
+              <Button variant="outline" onClick={() => console.log(yDoc.toJSON())}>
+                Log doc
+              </Button>
               <Button
                 variant={docUserLock.active ? 'destructive' : 'outline'}
                 disabled={
                   !docConfig ||
-                  (!docUserLock.active && !canActivateLock(docConfig, LockType.UserLock))
+                  (!docUserLock.active && !getCanActivateLock(docConfig, LockType.UserLock))
                 }
                 onClick={() => {
                   if (!docConfig) return
@@ -167,7 +169,8 @@ export default function SectionedCollabEditor({
               <Button
                 variant={docAiEdit.active ? 'destructive' : 'outline'}
                 disabled={
-                  !docConfig || (!docAiEdit.active && !canActivateLock(docConfig, LockType.AiEdit))
+                  !docConfig ||
+                  (!docAiEdit.active && !getCanActivateLock(docConfig, LockType.AiEdit))
                 }
                 onClick={() => {
                   if (!docConfig) return
@@ -181,26 +184,22 @@ export default function SectionedCollabEditor({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col gap-4 overflow-scroll p-4">
+          <div className="flex flex-1 flex-col divide-y overflow-scroll">
             {isProviderSynced &&
               document.sections.map((sectionName, index) => (
-                <div className="flex flex-col gap-2" key={sectionName}>
-                  <h4 className="text-md font-semibold text-muted-foreground uppercase">
-                    {sectionName}
-                  </h4>
-                  <SectionEditor
-                    sectionName={sectionName}
-                    provider={provider}
-                    aiAppId={aiAppId}
-                    user={user}
-                    yDoc={yDoc}
-                    isProviderSynced={isProviderSynced}
-                    setActiveSection={setActiveSection}
-                    isPrimary={index === 0}
-                    setPrimaryEditor={setPrimaryEditor}
-                    onSelectionUpdate={onSelectionUpdate}
-                  />
-                </div>
+                <SectionEditor
+                  key={sectionName}
+                  sectionName={sectionName}
+                  provider={provider}
+                  aiAppId={aiAppId}
+                  user={user}
+                  yDoc={yDoc}
+                  isProviderSynced={isProviderSynced}
+                  setActiveSection={setActiveSection}
+                  isPrimary={index === 0}
+                  setPrimaryEditor={setPrimaryEditor}
+                  onSelectionUpdate={onSelectionUpdate}
+                />
               ))}
           </div>
 

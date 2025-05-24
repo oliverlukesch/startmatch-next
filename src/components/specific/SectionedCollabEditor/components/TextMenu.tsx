@@ -111,21 +111,26 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
             <div className="grid grid-cols-2 gap-2">
               <DropdownMenuItem
                 onClick={() => {
-                  editor.chain().focus().aiShorten(sharedTextOptions).run()
+                  editor.chain().focus().startTrackingAiChanges().aiShorten(sharedTextOptions).run()
                 }}>
                 <ChevronsDownUp />
                 Shorten
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  editor.chain().focus().aiExtend(sharedTextOptions).run()
+                  editor.chain().focus().startTrackingAiChanges().aiExtend(sharedTextOptions).run()
                 }}>
                 <ChevronsUpDown />
                 Extend
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  editor.chain().focus().aiFixSpellingAndGrammar(sharedTextOptions).run()
+                  editor
+                    .chain()
+                    .focus()
+                    .startTrackingAiChanges()
+                    .aiFixSpellingAndGrammar(sharedTextOptions)
+                    .run()
                 }}>
                 <SpellCheck />
                 Correct
@@ -135,6 +140,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                   editor
                     .chain()
                     .focus()
+                    .startTrackingAiChanges()
                     .aiComplete({append: true, ...sharedTextOptions})
                     .run()
                 }}>
@@ -155,6 +161,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                         editor
                           .chain()
                           .focus()
+                          .startTrackingAiChanges()
                           .aiTranslate(language as Language, sharedTextOptions)
                           .run()
                       }}>
@@ -174,7 +181,12 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                     <DropdownMenuItem
                       key={tone}
                       onClick={() => {
-                        editor.chain().focus().aiAdjustTone(tone, sharedTextOptions).run()
+                        editor
+                          .chain()
+                          .focus()
+                          .startTrackingAiChanges()
+                          .aiAdjustTone(tone, sharedTextOptions)
+                          .run()
                       }}>
                       {tone.charAt(0).toUpperCase() + tone.slice(1)}
                     </DropdownMenuItem>
