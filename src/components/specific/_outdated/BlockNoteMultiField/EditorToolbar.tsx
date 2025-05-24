@@ -19,7 +19,7 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/compon
 
 import {cn} from '@/lib/utils'
 
-interface EditorToolbarProps {
+interface PrimaryToolbarProps {
   editor: Editor | null
   className?: string
 }
@@ -54,9 +54,9 @@ const ToolbarButton = ({
   </Tooltip>
 )
 
-export const EditorToolbar = ({editor, className}: EditorToolbarProps) => {
+export const PrimaryToolbar = ({editor, className}: PrimaryToolbarProps) => {
   // leave for debugging
-  // console.log('render EditorToolbar')
+  // console.log('render PrimaryToolbar')
 
   return (
     <TooltipProvider delayDuration={0}>

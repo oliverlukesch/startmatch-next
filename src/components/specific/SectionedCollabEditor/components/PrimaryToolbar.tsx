@@ -15,50 +15,24 @@ import {
   Undo,
 } from 'lucide-react'
 
-import {Button} from '@/components/ui/button'
 import {Separator} from '@/components/ui/separator'
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip'
+import {TooltipProvider} from '@/components/ui/tooltip'
 
 import {cn} from '@/lib/utils'
 
-interface EditorToolbarProps {
+import ToolbarButton from './ToolbarButton'
+
+interface PrimaryToolbarProps {
   editor: Editor | null
   className?: string
 }
 
-interface ToolbarButtonProps {
-  label: string
-  icon: React.ElementType
-  onClick: () => void
-  isDisabled?: boolean
-  isActive?: boolean
-}
-
-const ToolbarButton = ({
-  label,
-  icon: Icon,
-  onClick,
-  isDisabled = false,
-  isActive = false,
-}: ToolbarButtonProps) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant={isActive ? 'secondary' : 'ghost'}
-        size="icon"
-        disabled={isDisabled}
-        onClick={onClick}
-        aria-label={label}>
-        <Icon className="size-4" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{label}</TooltipContent>
-  </Tooltip>
-)
-
-export const EditorToolbar = memo(function EditorToolbar({editor, className}: EditorToolbarProps) {
+export const PrimaryToolbar = memo(function PrimaryToolbar({
+  editor,
+  className,
+}: PrimaryToolbarProps) {
   // leave for debugging
-  // console.log('render EditorToolbar')
+  // console.log('render PrimaryToolbar')
 
   return (
     <TooltipProvider delayDuration={0}>

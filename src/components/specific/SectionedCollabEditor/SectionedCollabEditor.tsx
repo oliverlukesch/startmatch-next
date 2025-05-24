@@ -10,10 +10,9 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {EditorBubbleMenu} from './EditorBubbleMenu'
-import {EditorSection} from './EditorSection'
-import {EditorToolbar} from './EditorToolbar'
-import {HistorySidebar} from './HistorySidebar'
+import {PrimaryToolbar} from './components/PrimaryToolbar'
+import {SectionEditor} from './components/SectionEditor'
+import {TextMenu} from './components/TextMenu'
 import {canActivateLock, getLockInfo, setLockInfo} from './helpers/docConfigHelpers'
 import './style.css'
 import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
@@ -35,13 +34,19 @@ export interface EditorProps {
   className?: string
 }
 
-export default function CollabEditor({document, user, docAppId, aiAppId, className}: EditorProps) {
+export default function SectionedCollabEditor({
+  document,
+  user,
+  docAppId,
+  aiAppId,
+  className,
+}: EditorProps) {
   // leave for debugging
-  // console.log('render CollabEditor')
+  // console.log('render SectionedCollabEditor')
 
   // document / YJS related actions triggered through the primary editor also
   // apply to the other editors (e.g. create version, revert version, etc.)
-  const [primaryEditor, setPrimaryEditor] = useState<Editor | null>(null)
+  const [, setPrimaryEditor] = useState<Editor | null>(null)
   const [activeSection, setActiveSection] = useState<{name: string; editor: Editor | null} | null>(
     null,
   )
@@ -121,7 +126,7 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
         {/* EDITOR SECTIONS */}
         <div className="flex flex-1 flex-col">
           {/* passing the editor through the selection ensures that the correct buttons are highlighted */}
-          <EditorToolbar editor={selection?.editor || null} />
+          <PrimaryToolbar editor={selection?.editor || null} />
 
           {/* DOCUMENT CONTROLS AND STATUS */}
           <div className="border-b">
@@ -183,7 +188,7 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
                   <h4 className="text-md font-semibold text-muted-foreground uppercase">
                     {sectionName}
                   </h4>
-                  <EditorSection
+                  <SectionEditor
                     sectionName={sectionName}
                     provider={provider}
                     aiAppId={aiAppId}
@@ -213,10 +218,10 @@ export default function CollabEditor({document, user, docAppId, aiAppId, classNa
           </div>
         </div>
 
-        <HistorySidebar yDoc={yDoc} primaryEditor={primaryEditor} />
+        <div className="w-80 shrink-0 border-l bg-slate-50 p-3">AI chat coming soon...</div>
       </div>
 
-      {selection?.editor && <EditorBubbleMenu editor={selection.editor} />}
+      {selection?.editor && <TextMenu editor={selection.editor} />}
     </>
   )
 }

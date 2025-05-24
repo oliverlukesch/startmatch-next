@@ -31,41 +31,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {Separator} from '@/components/ui/separator'
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip'
+import {TooltipProvider} from '@/components/ui/tooltip'
 
-interface EditorBubbleMenuProps {
+import ToolbarButton from './ToolbarButton'
+
+interface TextMenuProps {
   editor: Editor
 }
-
-interface ToolbarButtonProps {
-  label: string
-  icon: React.ElementType
-  onClick: () => void
-  isDisabled?: boolean
-  isActive?: boolean
-}
-
-const ToolbarButton = ({
-  label,
-  icon: Icon,
-  onClick,
-  isDisabled = false,
-  isActive = false,
-}: ToolbarButtonProps) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant={isActive ? 'secondary' : 'ghost'}
-        size="icon"
-        disabled={isDisabled}
-        onClick={onClick}
-        className="h-8 w-8">
-        <Icon className="size-4" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{label}</TooltipContent>
-  </Tooltip>
-)
 
 const sharedTextOptions: TextOptions = {
   modelName: 'gpt-4o',
@@ -85,7 +57,7 @@ const supportedTones = [
   'objective',
 ]
 
-export const EditorBubbleMenu = memo(function EditorBubbleMenu({editor}: EditorBubbleMenuProps) {
+export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
   // using a ref instead of state to prevent re-renders
   const dropDownIsOpenRef = useRef<boolean>(false)
 

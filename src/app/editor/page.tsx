@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-import {CollabEditor} from '@/components/specific/TipTapMultiSection'
+import {SectionedCollabEditor} from '@/components/specific/SectionedCollabEditor'
 
 export default function App() {
   const userId = `user_${Math.round(Math.random() * 1000)}`
@@ -17,7 +17,7 @@ export default function App() {
 
   return (
     <div className="flex max-h-screen flex-1 p-4">
-      <CollabEditor
+      <SectionedCollabEditor
         docAppId={process.env.TIPTAP_CLOUD_DEV_DOC_APP_ID || ''}
         aiAppId={process.env.TIPTAP_CLOUD_DEV_AI_APP_ID || ''}
         document={document}

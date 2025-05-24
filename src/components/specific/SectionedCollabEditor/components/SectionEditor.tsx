@@ -17,11 +17,11 @@ import {Button} from '@/components/ui/button'
 
 import {cn} from '@/lib/utils'
 
-import {canActivateLock, getLockInfo, isEditable, setLockInfo} from './helpers/docConfigHelpers'
-import {getOrCreateSubXmlFragment} from './helpers/yJsHelpers'
-import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
+import {canActivateLock, getLockInfo, isEditable, setLockInfo} from '../helpers/docConfigHelpers'
+import {getOrCreateSubXmlFragment} from '../helpers/yJsHelpers'
+import {DocConfig, LockInfo, LockType, docConfigKeys} from '../types'
 
-export interface EditorSectionProps {
+export interface SectionEditorProps {
   sectionName: string
   provider: TiptapCollabProvider
   aiAppId: string
@@ -37,14 +37,14 @@ export interface EditorSectionProps {
   setActiveSection: (params: {name: string; editor: Editor | null}) => void
   isPrimary: boolean
   setPrimaryEditor: (editor: Editor | null) => void
-  // required to trigger a re-render of the EditorToolbar when the selection
+  // required to trigger a re-render of the PrimaryToolbar when the selection
   // changes (which is required for highlighting the correct buttons)
   onSelectionUpdate: (data: EditorEvents['selectionUpdate']) => void
 }
 
 // TODO: take another stab at render performance, see here:
 // https://tiptap.dev/docs/editor/getting-started/install/react#optimize-your-performance
-export const EditorSection = memo(function EditorSection({
+export const SectionEditor = memo(function SectionEditor({
   sectionName,
   provider,
   aiAppId,
@@ -55,9 +55,9 @@ export const EditorSection = memo(function EditorSection({
   isPrimary,
   setPrimaryEditor,
   onSelectionUpdate,
-}: EditorSectionProps) {
+}: SectionEditorProps) {
   // leave for debugging
-  // console.log('render EditorSection', sectionName)
+  // console.log('render SectionEditor', sectionName)
 
   const [sectionUserLock, setSectionUserLock] = useState<LockInfo>({active: false})
   const [sectionAiEdit, setSectionAiEdit] = useState<LockInfo>({active: false})
