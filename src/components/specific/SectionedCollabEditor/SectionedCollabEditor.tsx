@@ -15,7 +15,7 @@ import {SectionEditor} from './components/SectionEditor'
 import {TextMenu} from './components/TextMenu'
 import {getCanActivateLock, getLockInfo, setLockInfo} from './helpers/docConfigHelpers'
 import './style.css'
-import {DocConfig, LockInfo, LockType, docConfigKeys} from './types'
+import {DocConfig, EditorUser, LockInfo, LockType, docConfigKeys} from './types'
 
 export interface EditorProps {
   docAppId: string
@@ -24,13 +24,7 @@ export interface EditorProps {
     name: string
     sections: string[]
   }
-  user: {
-    id: string
-    name: string
-    color: string
-    docToken: string
-    aiToken: string
-  }
+  user: EditorUser
   className?: string
 }
 

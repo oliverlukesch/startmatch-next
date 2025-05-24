@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
 
-import {DocConfig, LockInfo, LockType, docConfigKeys} from '../types'
+import {DocConfig, EditorUser, LockInfo, LockType, docConfigKeys} from '../types'
 import {safeYjsMapGet, safeYjsMapSet} from './yJsHelpers'
 
 export function getLockInfo(
@@ -24,7 +24,7 @@ export function setLockInfo(
   docConfig: Y.Map<DocConfig>,
   lockType: LockType,
   active: boolean,
-  user: {id: string; name: string},
+  user: EditorUser,
   sectionName?: string,
 ) {
   const keys = sectionName
@@ -64,16 +64,23 @@ export function getCanActivateLock(
   return true
 }
 
-export function getIsEditable(docConfig: Y.Map<DocConfig>, sectionName: string): boolean {
+export function getIsEditable(
+  docConfig: Y.Map<DocConfig>,
+  sectionName: string,
+  user: EditorUser,
+): boolean {
   const docUserLock = getLockInfo(docConfig, LockType.UserLock)
   const docAiEdit = getLockInfo(docConfig, LockType.AiEdit)
 
-  if (docUserLock.active || docAiEdit.active) return false
+  // users who triggered an AI edit can continue editing
+  if (docUserLock.active || (docAiEdit.active && docAiEdit.userId !== user.id)) return false
 
   const sectionUserLock = getLockInfo(docConfig, LockType.UserLock, sectionName)
   const sectionAiEdit = getLockInfo(docConfig, LockType.AiEdit, sectionName)
 
-  if (sectionUserLock.active || sectionAiEdit.active) return false
+  // users who triggered an AI edit can continue editing
+  if (sectionUserLock.active || (sectionAiEdit.active && sectionAiEdit.userId !== user.id))
+    return false
 
   return true
 }

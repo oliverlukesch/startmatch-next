@@ -1,3 +1,11 @@
+export interface EditorUser {
+  id: string
+  name: string
+  color: string
+  docToken: string
+  aiToken: string
+}
+
 export enum LockType {
   UserLock = 'userLock',
   AiEdit = 'aiEdit',

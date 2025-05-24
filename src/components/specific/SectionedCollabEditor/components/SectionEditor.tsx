@@ -25,19 +25,13 @@ import {
   setLockInfo,
 } from '../helpers/docConfigHelpers'
 import {getOrCreateSubXmlFragment} from '../helpers/yJsHelpers'
-import {DocConfig, LockInfo, LockType, docConfigKeys} from '../types'
+import {DocConfig, EditorUser, LockInfo, LockType, docConfigKeys} from '../types'
 
 export interface SectionEditorProps {
   sectionName: string
   provider: TiptapCollabProvider
   aiAppId: string
-  user: {
-    id: string
-    name: string
-    color: string
-    docToken: string
-    aiToken: string
-  }
+  user: EditorUser
   yDoc: Y.Doc
   isProviderSynced: boolean
   setActiveSection: (params: {name: string; editor: Editor | null}) => void
@@ -117,7 +111,7 @@ export const SectionEditor = memo(function SectionEditor({
                     context.editor.extensionStorage.aiChanges.getChanges(),
                   )
                   setHasAiChanges(context.editor.extensionStorage.aiChanges.getChanges().length > 0)
-                  // unlock will be handled by accepting or rejecting changes
+                  // unlock is handled by accepting or rejecting the changes
                 },
                 onError: (error, context) => {
                   console.error(error)
@@ -176,7 +170,7 @@ export const SectionEditor = memo(function SectionEditor({
     function updateLockStates() {
       setSectionUserLock(getLockInfo(docConfig!, LockType.UserLock, sectionName))
       setSectionAiEdit(getLockInfo(docConfig!, LockType.AiEdit, sectionName))
-      setIsEditable(getIsEditable(docConfig!, sectionName))
+      setIsEditable(getIsEditable(docConfig!, sectionName, user))
     }
 
     // initial update
@@ -195,7 +189,7 @@ export const SectionEditor = memo(function SectionEditor({
     return () => {
       docConfig.unobserve(onDocConfigUpdate)
     }
-  }, [docConfig, sectionName])
+  }, [docConfig, sectionName, user])
 
   useEffect(() => {
     if (isPrimary) setPrimaryEditor(editor)
