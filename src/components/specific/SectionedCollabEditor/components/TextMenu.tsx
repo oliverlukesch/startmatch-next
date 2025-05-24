@@ -1,6 +1,6 @@
 'use client'
 
-import {memo, useRef} from 'react'
+import {memo, useRef, useState} from 'react'
 
 import {Language, TextOptions, Tone, getHTMLContentBetween} from '@tiptap-pro/extension-ai'
 import type {Editor} from '@tiptap/core'
@@ -68,14 +68,15 @@ const languageKeys: Record<(typeof supportedLanguages)[number], string> = {
 }
 
 export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
-  // using a ref instead of state to prevent re-renders
   const dropDownIsOpenRef = useRef<boolean>(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   return (
     <BubbleMenu
       editor={editor}
       tippyOptions={{
         // prevents the bubble menu from closing when clicking on the dropdown
+        // uses a ref due to re-rendering issues with the state
         onHide: () => (dropDownIsOpenRef.current ? false : undefined),
       }}
       shouldShow={({editor, from, to}) => {
@@ -94,7 +95,12 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
       }}
       className="flex items-center gap-0.5 rounded-lg border bg-background p-1 shadow-md">
       <TooltipProvider delayDuration={0}>
-        <DropdownMenu onOpenChange={state => (dropDownIsOpenRef.current = state)}>
+        <DropdownMenu
+          onOpenChange={state => {
+            dropDownIsOpenRef.current = state
+            setIsDropdownOpen(state)
+          }}
+          open={isDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Edit with AI" className="h-8 w-8">
               <Bot className="size-4" />
@@ -152,7 +158,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                           .aiTranslate(language as Language, sharedTextOptions)
                           .run()
                       }}>
-                      {languageKeys[language] || language.toUpperCase()}
+                      {languageKeys[language]}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -190,12 +196,18 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                 event.stopPropagation()
 
                 // TODO: consider adding a min and max length for the prompt
+                // TODO: consider providing context (like the uploaded files)
+                // TODO: consider executing this prompt in the sidebar chat
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault()
                   const target = event.target as HTMLDivElement
 
                   const {from, to} = editor.state.selection
                   const selectedText = getHTMLContentBetween(editor, from, to)
+
+                  // force the text menu and dropdown to close
+                  document.body.click()
+                  setIsDropdownOpen(false)
 
                   if (target?.innerText) {
                     editor
