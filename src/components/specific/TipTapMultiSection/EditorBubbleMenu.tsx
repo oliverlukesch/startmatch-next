@@ -17,7 +17,6 @@ import {
   Italic,
   List,
   ListOrdered,
-  MessageCircle,
   SpellCheck,
 } from 'lucide-react'
 
@@ -26,11 +25,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover'
 import {Separator} from '@/components/ui/separator'
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip'
 
@@ -68,19 +67,6 @@ const ToolbarButton = ({
   </Tooltip>
 )
 
-interface DropDownButtonProps {
-  label: string
-  icon: React.ElementType
-  onClick: () => void
-}
-
-const DropDownButton = ({label, icon: Icon, onClick}: DropDownButtonProps) => (
-  <Button variant="ghost" onClick={onClick} className="justify-start">
-    <Icon className="size-4" />
-    {label}
-  </Button>
-)
-
 const sharedTextOptions: TextOptions = {
   modelName: 'gpt-4o',
   format: 'rich-text',
@@ -89,7 +75,6 @@ const sharedTextOptions: TextOptions = {
   startsInline: true,
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const supportedTones = [
   'informative',
   'academic',
@@ -101,9 +86,6 @@ const supportedTones = [
 ]
 
 export const EditorBubbleMenu = memo(function EditorBubbleMenu({editor}: EditorBubbleMenuProps) {
-  // leave for debugging
-  console.log('render BubbleMenu')
-
   // using a ref instead of state to prevent re-renders
   const dropDownIsOpenRef = useRef<boolean>(false)
 
@@ -130,75 +112,6 @@ export const EditorBubbleMenu = memo(function EditorBubbleMenu({editor}: EditorB
       }}
       className="flex items-center gap-0.5 rounded-lg border bg-background p-1 shadow-md">
       <TooltipProvider delayDuration={0}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Edit with AI" className="h-8 w-8">
-              <Bot className="size-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="flex w-40 flex-col gap-2 p-1"
-            align="start"
-            sideOffset={8}
-            alignOffset={-4}>
-            <DropDownButton
-              label="Shorten"
-              icon={ChevronsDownUp}
-              onClick={() => {
-                editor.chain().focus().aiShorten(sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Extend"
-              icon={ChevronsUpDown}
-              onClick={() => {
-                editor.chain().focus().aiExtend(sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Correct"
-              icon={SpellCheck}
-              onClick={() => {
-                editor.chain().focus().aiFixSpellingAndGrammar(sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Tone: Academic"
-              icon={MessageCircle}
-              onClick={() => {
-                editor.chain().focus().aiAdjustTone('academic', sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Tone: Business"
-              icon={MessageCircle}
-              onClick={() => {
-                editor.chain().focus().aiAdjustTone('business', sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Tone: Persuasive"
-              icon={MessageCircle}
-              onClick={() => {
-                editor.chain().focus().aiAdjustTone('persuasive', sharedTextOptions).run()
-              }}
-            />
-            <DropDownButton
-              label="Continue"
-              icon={ArrowRight}
-              onClick={() => {
-                editor
-                  .chain()
-                  .focus()
-                  .aiComplete({append: true, ...sharedTextOptions})
-                  .run()
-              }}
-            />
-          </PopoverContent>
-        </Popover>
-
-        <Separator orientation="vertical" className="mx-1 h-6!" />
-
         <DropdownMenu onOpenChange={state => (dropDownIsOpenRef.current = state)}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Edit with AI" className="h-8 w-8">
@@ -206,13 +119,52 @@ export const EditorBubbleMenu = memo(function EditorBubbleMenu({editor}: EditorB
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" sideOffset={8} alignOffset={-4}>
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Billing</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Team</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                editor.chain().focus().aiShorten(sharedTextOptions).run()
+              }}>
+              <ChevronsDownUp />
+              Shorten
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                editor.chain().focus().aiExtend(sharedTextOptions).run()
+              }}>
+              <ChevronsUpDown />
+              Extend
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                editor.chain().focus().aiFixSpellingAndGrammar(sharedTextOptions).run()
+              }}>
+              <SpellCheck />
+              Correct
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                editor
+                  .chain()
+                  .focus()
+                  .aiComplete({append: true, ...sharedTextOptions})
+                  .run()
+              }}>
+              <ArrowRight />
+              Continue
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Change Tone</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {supportedTones.map(tone => (
+                  <DropdownMenuItem
+                    key={tone}
+                    onClick={() => {
+                      editor.chain().focus().aiAdjustTone(tone, sharedTextOptions).run()
+                    }}>
+                    {tone.charAt(0).toUpperCase() + tone.slice(1)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
 
