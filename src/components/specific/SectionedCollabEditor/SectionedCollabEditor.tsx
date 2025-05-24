@@ -159,10 +159,7 @@ export default function SectionedCollabEditor({
                 }
                 onClick={() => {
                   if (!docConfig) return
-                  setLockInfo(docConfig, LockType.UserLock, !docUserLock.active, {
-                    userId: user.id,
-                    name: user.name,
-                  })
+                  setLockInfo(docConfig, LockType.UserLock, !docUserLock.active, user)
                 }}>
                 {docUserLock.active ? 'Unlock Document' : 'Lock Document'}
               </Button>
@@ -174,10 +171,7 @@ export default function SectionedCollabEditor({
                 }
                 onClick={() => {
                   if (!docConfig) return
-                  setLockInfo(docConfig, LockType.AiEdit, !docAiEdit.active, {
-                    userId: user.id,
-                    name: user.name,
-                  })
+                  setLockInfo(docConfig, LockType.AiEdit, !docAiEdit.active, user)
                 }}>
                 {docAiEdit.active ? 'Stop AI Edit' : 'Start AI Edit'}
               </Button>

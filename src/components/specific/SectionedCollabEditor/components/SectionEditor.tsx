@@ -1,6 +1,6 @@
 'use client'
 
-import {memo, useEffect, useMemo, useState} from 'react'
+import {memo, useCallback, useEffect, useMemo, useState} from 'react'
 
 import {TiptapCollabProvider} from '@hocuspocus/provider'
 import Ai from '@tiptap-pro/extension-ai'
@@ -82,6 +82,14 @@ export const SectionEditor = memo(function SectionEditor({
     return yDoc.getMap<DocConfig>(docConfigKeys.mapName)
   }, [yDoc, isProviderSynced])
 
+  const setSectionLockInfo = useCallback(
+    (lockType: LockType, active: boolean) => {
+      if (!docConfig) return
+      setLockInfo(docConfig, lockType, active, user, sectionName)
+    },
+    [docConfig, user, sectionName],
+  )
+
   const editor = useEditor(
     {
       extensions: [
@@ -100,15 +108,22 @@ export const SectionEditor = memo(function SectionEditor({
                 autocompletion: false,
                 onLoading: () => {
                   setIsAiEditing(true)
+                  setSectionLockInfo(LockType.AiEdit, true)
                 },
                 onSuccess: context => {
                   setIsAiEditing(false)
+                  console.log(
+                    'AI edit finished',
+                    context.editor.extensionStorage.aiChanges.getChanges(),
+                  )
                   setHasAiChanges(context.editor.extensionStorage.aiChanges.getChanges().length > 0)
+                  // unlock will be handled by accepting or rejecting changes
                 },
                 onError: (error, context) => {
                   console.error(error)
-                  setIsAiEditing(false)
                   context.editor.commands.stopTrackingAiChanges()
+                  setIsAiEditing(false)
+                  setSectionLockInfo(LockType.AiEdit, false)
                 },
               }),
               // TODO: add AI suggestions
@@ -190,110 +205,85 @@ export const SectionEditor = memo(function SectionEditor({
     if (editor) editor.setEditable(isEditable)
   }, [editor, isEditable])
 
+  if (!editor || !isProviderSynced || !subFragment) return null
+
   return (
-    editor && (
-      <div className="flex flex-col gap-2 p-4">
-        <div className="flex items-center gap-2">
-          <h4 className="text-md inline font-semibold text-muted-foreground uppercase">
-            {sectionName}
-          </h4>
+    <div className="flex flex-col gap-2 p-4">
+      <div className="flex items-center gap-2">
+        <h4 className="text-md inline font-semibold text-muted-foreground uppercase">
+          {sectionName}
+        </h4>
 
-          {isAiEditing && <LoaderCircle className="size-5 animate-spin" />}
+        {isAiEditing && <LoaderCircle className="size-5 animate-spin" />}
 
-          {/* LOCK INFO */}
-          {(sectionUserLock.active || sectionAiEdit.active) && (
-            <div
-              className={cn(
-                'rounded px-1 py-0.5 text-sm',
-                sectionUserLock.active ? 'bg-yellow-200' : 'bg-blue-200',
-              )}>
-              {sectionUserLock.active ? '🔒 Section locked by ' : '🤖 AI edit triggered by '}
-              <span className="font-semibold">
-                {sectionUserLock.active ? sectionUserLock.userName : sectionAiEdit.userName}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* CONTROLS */}
-        <div className="flex gap-2">
-          <Button
-            variant={sectionUserLock.active ? 'destructive' : 'outline'}
-            disabled={
-              !docConfig ||
-              (!sectionUserLock.active &&
-                !getCanActivateLock(docConfig, LockType.UserLock, sectionName))
-            }
-            onClick={() => {
-              if (!docConfig) return
-              setLockInfo(
-                docConfig,
-                LockType.UserLock,
-                !sectionUserLock.active,
-                {
-                  userId: user.id,
-                  name: user.name,
-                },
-                sectionName,
-              )
-            }}>
-            {sectionUserLock.active ? 'Unlock' : 'Lock'}
-          </Button>
-
-          <Button
-            variant={sectionAiEdit.active ? 'destructive' : 'outline'}
-            disabled={
-              !docConfig ||
-              (!sectionAiEdit.active &&
-                !getCanActivateLock(docConfig, LockType.AiEdit, sectionName))
-            }
-            onClick={() => {
-              if (!docConfig) return
-              setLockInfo(
-                docConfig,
-                LockType.AiEdit,
-                !sectionAiEdit.active,
-                {
-                  userId: user.id,
-                  name: user.name,
-                },
-                sectionName,
-              )
-            }}>
-            {sectionAiEdit.active ? 'Stop AI' : 'Start AI'}
-          </Button>
-
-          {hasAiChanges && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  editor.chain().acceptAllAiChanges().stopTrackingAiChanges().run()
-                  setHasAiChanges(false)
-                }}>
-                Accept all
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  editor.chain().rejectAllAiChanges().stopTrackingAiChanges().run()
-                  setHasAiChanges(false)
-                }}>
-                Reject all
-              </Button>
-            </>
-          )}
-        </div>
-
-        <EditorContent
-          editor={editor}
-          className={cn(
-            'rounded-lg bg-slate-50 p-4 focus-within:bg-amber-50',
-            !isEditable && 'cursor-not-allowed opacity-50 select-none',
-          )}
-        />
+        {/* LOCK INFO */}
+        {(sectionUserLock.active || sectionAiEdit.active) && (
+          <div
+            className={cn(
+              'rounded px-1 py-0.5 text-sm',
+              sectionUserLock.active ? 'bg-yellow-200' : 'bg-blue-200',
+            )}>
+            {sectionUserLock.active ? '🔒 Section locked by ' : '🤖 AI edit triggered by '}
+            <span className="font-semibold">
+              {sectionUserLock.active ? sectionUserLock.userName : sectionAiEdit.userName}
+            </span>
+          </div>
+        )}
       </div>
-    )
+
+      {/* CONTROLS */}
+      <div className="flex gap-2">
+        <Button
+          variant={sectionUserLock.active ? 'destructive' : 'outline'}
+          disabled={
+            !docConfig ||
+            (!sectionUserLock.active &&
+              !getCanActivateLock(docConfig, LockType.UserLock, sectionName))
+          }
+          onClick={() => setSectionLockInfo(LockType.UserLock, !sectionUserLock.active)}>
+          {sectionUserLock.active ? 'Unlock' : 'Lock'}
+        </Button>
+
+        {/* TODO: consider offering this option to other users to disable the
+        lock in case the triggering user has exited without stopping the AI */}
+        {/* {sectionAiEdit.active && (
+          <Button variant="destructive" onClick={() => setSectionLockInfo(LockType.AiEdit, false)}>
+            Force unlock
+          </Button>
+        )} */}
+
+        {hasAiChanges && (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                editor.chain().acceptAllAiChanges().stopTrackingAiChanges().run()
+                setSectionLockInfo(LockType.AiEdit, false)
+                setHasAiChanges(false)
+              }}>
+              Accept all
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                editor.chain().rejectAllAiChanges().stopTrackingAiChanges().run()
+                setSectionLockInfo(LockType.AiEdit, false)
+                setHasAiChanges(false)
+              }}>
+              Reject all
+            </Button>
+          </>
+        )}
+      </div>
+
+      <EditorContent
+        editor={editor}
+        className={cn(
+          'rounded-lg bg-slate-50 p-4 focus-within:bg-amber-50',
+          !isEditable && 'cursor-not-allowed opacity-50 select-none',
+        )}
+      />
+    </div>
   )
 })

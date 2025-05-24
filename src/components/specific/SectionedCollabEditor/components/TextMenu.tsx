@@ -217,6 +217,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                     editor
                       .chain()
                       .focus()
+                      .startTrackingAiChanges()
                       .aiTextPrompt({
                         text: `Apply the following command "${target.innerText}" to this text: ${selectedText}`,
                         ...sharedTextOptions,

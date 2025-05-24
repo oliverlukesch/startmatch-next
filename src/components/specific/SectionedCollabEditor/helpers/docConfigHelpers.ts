@@ -24,7 +24,7 @@ export function setLockInfo(
   docConfig: Y.Map<DocConfig>,
   lockType: LockType,
   active: boolean,
-  user: {userId: string; name: string},
+  user: {id: string; name: string},
   sectionName?: string,
 ) {
   const keys = sectionName
@@ -34,7 +34,7 @@ export function setLockInfo(
   safeYjsMapSet(docConfig, keys.active, active)
 
   if (active) {
-    safeYjsMapSet(docConfig, keys.userId, user.userId)
+    safeYjsMapSet(docConfig, keys.userId, user.id)
     safeYjsMapSet(docConfig, keys.userName, user.name)
     safeYjsMapSet(docConfig, keys.timestamp, new Date().toISOString())
   } else {
