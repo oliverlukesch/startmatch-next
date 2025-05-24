@@ -2,7 +2,7 @@
 
 import {memo, useRef} from 'react'
 
-import {Language, TextOptions, Tone} from '@tiptap-pro/extension-ai'
+import {Language, TextOptions, Tone, getHTMLContentBetween} from '@tiptap-pro/extension-ai'
 import type {Editor} from '@tiptap/core'
 import {BubbleMenu} from '@tiptap/react'
 import {
@@ -186,12 +186,27 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
               role="textbox"
               tabIndex={0}
               onKeyDown={event => {
+                // disables the shortcuts for the dropdown menu
                 event.stopPropagation()
 
+                // TODO: consider adding a min and max length for the prompt
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault()
                   const target = event.target as HTMLDivElement
-                  if (target) console.log(target.innerText)
+
+                  const {from, to} = editor.state.selection
+                  const selectedText = getHTMLContentBetween(editor, from, to)
+
+                  if (target?.innerText) {
+                    editor
+                      .chain()
+                      .focus()
+                      .aiTextPrompt({
+                        text: `Apply the following command "${target.innerText}" to this text: ${selectedText}`,
+                        ...sharedTextOptions,
+                      })
+                      .run()
+                  }
                 }
               }}
             />
