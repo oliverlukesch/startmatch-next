@@ -1,6 +1,6 @@
 'use client'
 
-import {memo, useRef, useState} from 'react'
+import {memo, useRef} from 'react'
 
 import {Language, TextOptions, Tone, getHTMLContentBetween} from '@tiptap-pro/extension-ai'
 import type {Editor} from '@tiptap/core'
@@ -69,8 +69,6 @@ const languageKeys: Record<(typeof supportedLanguages)[number], string> = {
 
 export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
   const dropDownIsOpenRef = useRef<boolean>(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-
   return (
     <BubbleMenu
       editor={editor}
@@ -95,12 +93,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
       }}
       className="flex items-center gap-0.5 rounded-lg border bg-background p-1 shadow-md">
       <TooltipProvider delayDuration={0}>
-        <DropdownMenu
-          onOpenChange={state => {
-            dropDownIsOpenRef.current = state
-            setIsDropdownOpen(state)
-          }}
-          open={isDropdownOpen}>
+        <DropdownMenu onOpenChange={state => (dropDownIsOpenRef.current = state)}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Edit with AI" className="h-8 w-8">
               <Bot className="size-4" />
@@ -218,8 +211,7 @@ export const TextMenu = memo(function TextMenu({editor}: TextMenuProps) {
                   const selectedText = getHTMLContentBetween(editor, from, to)
 
                   // force the text menu and dropdown to close
-                  document.body.click()
-                  setIsDropdownOpen(false)
+                  document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}))
 
                   if (target?.innerText) {
                     editor
